@@ -64,9 +64,17 @@ builder.Services.AddScoped<Supabase.Client>(_ => new Supabase.Client(supabaseUrl
 // =============================================
 // 3. INYECCIÓN DE DEPENDENCIAS (SERVICIOS Y MAPPER)
 // =============================================
-builder.Services.AddAutoMapper(cfg => cfg.AddProfile<CatalogoMappingProfile>());
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<CatalogoMappingProfile>();
+    cfg.AddProfile<VentasMappingProfile>();
+});
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<ITurnoCajaService, TurnoCajaService>();
+builder.Services.AddScoped<IVentaService, VentaService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+
 
 // =============================================
 // 4. AUTENTICACIÓN JWT Y AUTORIZACIÓN
@@ -135,5 +143,8 @@ app.UseAuthorization();
 // =============================================
 app.MapUsuarioEndpoints();
 app.MapProductoEndpoints();
+app.MapTurnoCajaEndpoints();
+app.MapVentaEndpoints();
+app.MapDashboardEndpoints();
 
 app.Run();
