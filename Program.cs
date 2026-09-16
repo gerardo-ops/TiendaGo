@@ -2,11 +2,22 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.EntityFrameworkCore;
 using TiendaGo.Endpoints;
 using TiendaGo.Mappings;
+using TiendaGo.Models;
 using TiendaGo.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// =============================================
+// REGISTRO DE CONEXIÓN POSTGRESQL (EF CORE)
+// =============================================
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Host=aws-0-us-west-2.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.ywxnbqblfazplkggkcgw;Password=TiendaGo123;SSL Mode=Require;Trust Server Certificate=true";
+
+builder.Services.AddDbContext<TiendaGoDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 // =============================================
 // 1. CONFIGURACIÓN DE SWAGGER / OPENAPI CON JWT

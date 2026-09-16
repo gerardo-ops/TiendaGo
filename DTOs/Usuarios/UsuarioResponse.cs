@@ -8,6 +8,6 @@ public class UsuarioResponse
     public string NombreCompleto { get; set; } = string.Empty;
     public string CorreoElectronico { get; set; } = string.Empty;
     public bool EstadoActivo { get; set; }
-    public DateTimeOffset FechaRegistro { get; set; }
+    public DateTime FechaRegistro { get; set; }
     public string? Token { get; set; }
 }

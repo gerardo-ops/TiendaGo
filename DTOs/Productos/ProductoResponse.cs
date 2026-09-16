@@ -13,10 +13,8 @@ public class ProductoResponse
     public int StockMinimo { get; set; }
     public string? UrlImagen { get; set; }
     public bool EstadoActivo { get; set; }
-    public DateTimeOffset FechaCreacion { get; set; }
+    public DateTime FechaCreacion { get; set; }
 
-    /// <summary>
-    /// Indica si el producto tiene existencias en nivel crítico (<= stock mínimo) para alertas en POS y catálogo
-    /// </summary>
+    // Indicador para terminal POS y catálogo
     public bool StockCritico => StockActual <= StockMinimo;
 }

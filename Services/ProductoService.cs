@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using TiendaGo.DTOs.Productos;
 using TiendaGo.Models;
 
@@ -6,199 +7,166 @@ namespace TiendaGo.Services;
 
 public class ProductoService : IProductoService
 {
-    private readonly Supabase.Client _supabase;
+    private readonly TiendaGoDbContext _context;
     private readonly IMapper _mapper;
 
-    public ProductoService(Supabase.Client supabase, IMapper mapper)
+    public ProductoService(TiendaGoDbContext context, IMapper mapper)
     {
-        _supabase = supabase;
+        _context = context;
         _mapper = mapper;
     }
 
     public async Task<IEnumerable<ProductoResponse>> ObtenerTodosAsync(string? buscar = null, long? idCategoria = null)
     {
-        var response = await _supabase.From<Producto>().Get();
-        var productos = response.Models.AsEnumerable();
+        var query = _context.Productos
+            .Include(p => p.IdCategoriaNavigation)
+            .AsNoTracking()
+            .AsQueryable();
 
         if (idCategoria.HasValue && idCategoria.Value > 0)
         {
-            productos = productos.Where(p => p.IdCategoria == idCategoria.Value);
+            query = query.Where(p => p.IdCategoria == idCategoria.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(buscar))
         {
             var termino = buscar.Trim().ToLower();
-            productos = productos.Where(p =>
+            query = query.Where(p =>
                 p.NombreProducto.ToLower().Contains(termino) ||
                 p.CodigoSku.ToLower().Contains(termino));
         }
 
-        var categoriasDict = await ObtenerDiccionarioCategoriasAsync();
-        var resultado = new List<ProductoResponse>();
-
-        foreach (var p in productos)
-        {
-            if (categoriasDict.TryGetValue(p.IdCategoria, out var cat))
-            {
-                p.Categoria = cat;
-            }
-            resultado.Add(_mapper.Map<ProductoResponse>(p));
-        }
-
-        return resultado.OrderBy(p => p.NombreProducto);
+        var productos = await query.OrderBy(p => p.NombreProducto).ToListAsync();
+        return _mapper.Map<IEnumerable<ProductoResponse>>(productos);
     }
 
     public async Task<IEnumerable<ProductoResponse>> ObtenerActivosAsync()
     {
-        var response = await _supabase.From<Producto>()
-            .Where(p => p.EstadoActivo == true)
-            .Get();
+        var productos = await _context.Productos
+            .Include(p => p.IdCategoriaNavigation)
+            .Where(p => p.EstadoActivo)
+            .OrderBy(p => p.NombreProducto)
+            .AsNoTracking()
+            .ToListAsync();
 
-        var categoriasDict = await ObtenerDiccionarioCategoriasAsync();
-        var resultado = new List<ProductoResponse>();
-
-        foreach (var p in response.Models)
-        {
-            if (categoriasDict.TryGetValue(p.IdCategoria, out var cat))
-            {
-                p.Categoria = cat;
-            }
-            resultado.Add(_mapper.Map<ProductoResponse>(p));
-        }
-
-        return resultado.OrderBy(p => p.NombreProducto);
+        return _mapper.Map<IEnumerable<ProductoResponse>>(productos);
     }
 
     public async Task<ProductoResponse?> ObtenerPorIdAsync(long id)
     {
-        var response = await _supabase.From<Producto>()
-            .Where(p => p.IdProducto == id)
-            .Get();
+        var producto = await _context.Productos
+            .Include(p => p.IdCategoriaNavigation)
+            .FirstOrDefaultAsync(p => p.IdProducto == id);
 
-        var producto = response.Models.FirstOrDefault();
-        if (producto == null) return null;
-
-        var categoriasDict = await ObtenerDiccionarioCategoriasAsync();
-        if (categoriasDict.TryGetValue(producto.IdCategoria, out var cat))
-        {
-            producto.Categoria = cat;
-        }
-
-        return _mapper.Map<ProductoResponse>(producto);
+        return producto != null ? _mapper.Map<ProductoResponse>(producto) : null;
     }
 
     public async Task<ProductoResponse?> ObtenerPorCodigoAsync(string codigoSku)
     {
-        var response = await _supabase.From<Producto>()
-            .Where(p => p.CodigoSku == codigoSku.Trim())
-            .Get();
+        if (string.IsNullOrWhiteSpace(codigoSku)) return null;
 
-        var producto = response.Models.FirstOrDefault();
-        if (producto == null) return null;
+        var sku = codigoSku.Trim().ToLower();
+        var producto = await _context.Productos
+            .Include(p => p.IdCategoriaNavigation)
+            .FirstOrDefaultAsync(p => p.CodigoSku.ToLower() == sku);
 
-        var categoriasDict = await ObtenerDiccionarioCategoriasAsync();
-        if (categoriasDict.TryGetValue(producto.IdCategoria, out var cat))
-        {
-            producto.Categoria = cat;
-        }
-
-        return _mapper.Map<ProductoResponse>(producto);
+        return producto != null ? _mapper.Map<ProductoResponse>(producto) : null;
     }
 
     public async Task<ProductoResponse> CrearAsync(ProductoRequest request)
     {
-        // Validar SKU único
-        var existente = await _supabase.From<Producto>()
-            .Where(p => p.CodigoSku == request.CodigoSku.Trim())
-            .Get();
+        var sku = (request.CodigoSku ?? request.Codigo ?? string.Empty).Trim();
+        var nombre = (request.NombreProducto ?? request.Nombre ?? string.Empty).Trim();
 
-        if (existente.Models.Count > 0)
+        var existeSku = await _context.Productos.AnyAsync(p => p.CodigoSku.ToLower() == sku.ToLower());
+        if (existeSku)
         {
-            throw new InvalidOperationException($"Ya existe un producto registrado con el código SKU '{request.CodigoSku}'.");
+            throw new InvalidOperationException($"Ya existe un producto registrado con el código SKU '{sku}'.");
         }
 
-        var producto = _mapper.Map<Producto>(request);
-        producto.CodigoSku = request.CodigoSku.Trim();
-        producto.FechaCreacion = DateTimeOffset.UtcNow;
-
-        var insertResponse = await _supabase.From<Producto>().Insert(producto);
-        var nuevo = insertResponse.Models.FirstOrDefault() ?? producto;
-
-        var categoriasDict = await ObtenerDiccionarioCategoriasAsync();
-        if (categoriasDict.TryGetValue(nuevo.IdCategoria, out var cat))
+        var categoriaExiste = await _context.Categorias.AnyAsync(c => c.IdCategoria == request.IdCategoria);
+        if (!categoriaExiste)
         {
-            nuevo.Categoria = cat;
+            throw new InvalidOperationException($"La categoría con ID {request.IdCategoria} no existe.");
         }
 
-        return _mapper.Map<ProductoResponse>(nuevo);
+        var producto = new Productos
+        {
+            IdCategoria = request.IdCategoria,
+            NombreProducto = nombre,
+            CodigoSku = sku,
+            CostoCompra = request.CostoCompra,
+            PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : (request.Precio ?? 0m),
+            StockActual = request.StockActual > 0 ? request.StockActual : (request.Stock ?? 0),
+            StockMinimo = request.StockMinimo,
+            UrlImagen = request.UrlImagen,
+            EstadoActivo = request.Estado ?? request.EstadoActivo,
+            FechaCreacion = DateTime.UtcNow
+        };
+
+        _context.Productos.Add(producto);
+        await _context.SaveChangesAsync();
+
+        await _context.Entry(producto).Reference(p => p.IdCategoriaNavigation).LoadAsync();
+
+        return _mapper.Map<ProductoResponse>(producto);
     }
 
     public async Task<ProductoResponse?> ActualizarAsync(long id, ProductoRequest request)
     {
-        var response = await _supabase.From<Producto>()
-            .Where(p => p.IdProducto == id)
-            .Get();
+        var producto = await _context.Productos
+            .Include(p => p.IdCategoriaNavigation)
+            .FirstOrDefaultAsync(p => p.IdProducto == id);
 
-        var producto = response.Models.FirstOrDefault();
         if (producto == null) return null;
 
-        // Validar si el SKU cambió y si ya pertenece a otro producto
-        if (!string.Equals(producto.CodigoSku, request.CodigoSku.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            var skuExistente = await _supabase.From<Producto>()
-                .Where(p => p.CodigoSku == request.CodigoSku.Trim())
-                .Get();
+        var sku = (request.CodigoSku ?? request.Codigo ?? string.Empty).Trim();
+        var nombre = (request.NombreProducto ?? request.Nombre ?? string.Empty).Trim();
 
-            if (skuExistente.Models.Any(p => p.IdProducto != id))
+        if (!string.Equals(producto.CodigoSku, sku, StringComparison.OrdinalIgnoreCase))
+        {
+            var skuExiste = await _context.Productos.AnyAsync(p => p.IdProducto != id && p.CodigoSku.ToLower() == sku.ToLower());
+            if (skuExiste)
             {
-                throw new InvalidOperationException($"El código SKU '{request.CodigoSku}' ya está asignado a otro producto.");
+                throw new InvalidOperationException($"El código SKU '{sku}' ya está asignado a otro producto.");
             }
         }
 
-        producto.IdCategoria = request.IdCategoria;
-        producto.NombreProducto = request.NombreProducto.Trim();
-        producto.CodigoSku = request.CodigoSku.Trim();
+        if (request.IdCategoria > 0 && request.IdCategoria != producto.IdCategoria)
+        {
+            var catExiste = await _context.Categorias.AnyAsync(c => c.IdCategoria == request.IdCategoria);
+            if (!catExiste)
+            {
+                throw new InvalidOperationException($"La categoría con ID {request.IdCategoria} no existe.");
+            }
+            producto.IdCategoria = request.IdCategoria;
+        }
+
+        producto.NombreProducto = nombre;
+        producto.CodigoSku = sku;
         producto.CostoCompra = request.CostoCompra;
-        producto.PrecioVenta = request.PrecioVenta;
-        producto.StockActual = request.StockActual;
+        producto.PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : (request.Precio ?? producto.PrecioVenta);
+        producto.StockActual = request.StockActual >= 0 ? request.StockActual : (request.Stock ?? producto.StockActual);
         producto.StockMinimo = request.StockMinimo;
         producto.UrlImagen = request.UrlImagen;
-        producto.EstadoActivo = request.EstadoActivo;
+        producto.EstadoActivo = request.Estado ?? request.EstadoActivo;
 
-        await _supabase.From<Producto>()
-            .Where(p => p.IdProducto == id)
-            .Update(producto);
+        await _context.SaveChangesAsync();
 
-        var categoriasDict = await ObtenerDiccionarioCategoriasAsync();
-        if (categoriasDict.TryGetValue(producto.IdCategoria, out var cat))
-        {
-            producto.Categoria = cat;
-        }
+        await _context.Entry(producto).Reference(p => p.IdCategoriaNavigation).LoadAsync();
 
         return _mapper.Map<ProductoResponse>(producto);
     }
 
     public async Task<bool> EliminarAsync(long id)
     {
-        var response = await _supabase.From<Producto>()
-            .Where(p => p.IdProducto == id)
-            .Get();
-
-        var producto = response.Models.FirstOrDefault();
+        var producto = await _context.Productos.FindAsync(id);
         if (producto == null) return false;
 
-        // Baja lógica para mantener consistencia referencial con ventas históricas
+        // Baja lógica
         producto.EstadoActivo = false;
-        await _supabase.From<Producto>()
-            .Where(p => p.IdProducto == id)
-            .Update(producto);
+        await _context.SaveChangesAsync();
 
         return true;
-    }
-
-    private async Task<Dictionary<long, Categoria>> ObtenerDiccionarioCategoriasAsync()
-    {
-        var catResponse = await _supabase.From<Categoria>().Get();
-        return catResponse.Models.ToDictionary(c => c.IdCategoria, c => c);
     }
 }

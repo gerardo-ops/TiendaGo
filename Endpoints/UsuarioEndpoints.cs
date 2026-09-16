@@ -18,23 +18,21 @@ public static class UsuarioEndpoints
             [FromBody] LoginRequest request,
             [FromServices] IUsuarioService usuarioService) =>
         {
-            if (string.IsNullOrWhiteSpace(request.CorreoElectronico) || string.IsNullOrWhiteSpace(request.Clave))
+            var correo = request.CorreoElectronico ?? request.Usuario;
+            var password = request.Clave ?? request.Password;
+
+            if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(password))
             {
-                return Results.BadRequest(new { mensaje = "El correo y la contraseña son requeridos." });
+                return Results.BadRequest(new { mensaje = "El usuario/correo y la contraseña son requeridos." });
             }
 
-            var usuario = await usuarioService.LoginAsync(request);
-            if (usuario == null)
+            var loginResponse = await usuarioService.LoginAsync(request);
+            if (loginResponse == null)
             {
                 return Results.Unauthorized();
             }
 
-            return Results.Ok(new
-            {
-                mensaje = "Inicio de sesión exitoso.",
-                token = usuario.Token,
-                usuario
-            });
+            return Results.Ok(loginResponse);
         })
         .AllowAnonymous()
         .WithName("Login")
@@ -71,9 +69,13 @@ public static class UsuarioEndpoints
             [FromBody] CrearUsuarioRequest request,
             [FromServices] IUsuarioService usuarioService) =>
         {
-            if (string.IsNullOrWhiteSpace(request.CorreoElectronico) ||
-                string.IsNullOrWhiteSpace(request.Clave) ||
-                string.IsNullOrWhiteSpace(request.NombreCompleto))
+            var correo = request.CorreoElectronico ?? request.Correo;
+            var nombre = request.NombreCompleto ?? request.Nombre;
+            var password = request.Clave ?? request.Password;
+
+            if (string.IsNullOrWhiteSpace(correo) ||
+                string.IsNullOrWhiteSpace(password) ||
+                string.IsNullOrWhiteSpace(nombre))
             {
                 return Results.BadRequest(new { mensaje = "Nombre completo, correo y contraseña son obligatorios." });
             }
