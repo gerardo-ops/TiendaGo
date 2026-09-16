@@ -11,8 +11,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# .NET build artifacts
+bin/
+obj/
+
 # IDE & OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
