@@ -6,7 +6,7 @@ namespace TiendaGo.Endpoints;
 
 public static class ProductoEndpoints
 {
-    public static IEndpointRouteBuilder MapProductoEndpoints(this IEndpointRouteBuilder routes)
+    public static void MapProductoEndpoints(this IEndpointRouteBuilder routes)
     {
         // =============================================
         // GRUPO: /api/productos (Catálogo e Inventario)
@@ -36,8 +36,8 @@ public static class ProductoEndpoints
         .WithSummary("Consulta los productos activos disponibles para la terminal POS");
 
         // Obtener producto por ID
-        productosGroup.MapGet("/{id:long}", async (
-            long id,
+        productosGroup.MapGet("/{id:int}", async (
+            int id,
             [FromServices] IProductoService productoService) =>
         {
             var producto = await productoService.ObtenerPorIdAsync(id);
@@ -48,7 +48,20 @@ public static class ProductoEndpoints
         .WithName("ObtenerProductoPorId")
         .WithSummary("Consulta la ficha detallada de un producto por su ID");
 
-        // Obtener producto por código SKU / barras (escáner cámara)
+        // Obtener producto por código SKU / barras
+        productosGroup.MapGet("/buscar/{codigo}", async (
+            string codigo,
+            [FromServices] IProductoService productoService) =>
+        {
+            var producto = await productoService.ObtenerPorCodigoAsync(codigo);
+            return producto != null
+                ? Results.Ok(producto)
+                : Results.NotFound(new { mensaje = $"Producto con código '{codigo}' no encontrado." });
+        })
+        .WithName("BuscarProductoPorCodigo")
+        .WithSummary("Consulta un producto por su código de barras o SKU");
+
+        // Ruta alternativa por SKU
         productosGroup.MapGet("/sku/{sku}", async (
             string sku,
             [FromServices] IProductoService productoService) =>
@@ -66,9 +79,12 @@ public static class ProductoEndpoints
             [FromBody] ProductoRequest request,
             [FromServices] IProductoService productoService) =>
         {
-            if (string.IsNullOrWhiteSpace(request.NombreProducto) || string.IsNullOrWhiteSpace(request.CodigoSku))
+            var nombre = request.Nombre ?? request.NombreProducto;
+            var codigo = request.CodigoBarra ?? request.CodigoSku ?? request.Codigo;
+
+            if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(codigo))
             {
-                return Results.BadRequest(new { mensaje = "El nombre y el código SKU del producto son requeridos." });
+                return Results.BadRequest(new { mensaje = "El nombre y el código de barra/SKU del producto son requeridos." });
             }
 
             if (request.IdCategoria <= 0)
@@ -95,21 +111,24 @@ public static class ProductoEndpoints
         .WithSummary("Registra un nuevo producto en el catálogo e inventario");
 
         // Editar producto existente
-        productosGroup.MapPut("/{id:long}", async (
-            long id,
+        productosGroup.MapPut("/{id:int}", async (
+            int id,
             [FromBody] ProductoRequest request,
             [FromServices] IProductoService productoService) =>
         {
-            if (string.IsNullOrWhiteSpace(request.NombreProducto) || string.IsNullOrWhiteSpace(request.CodigoSku))
+            var nombre = request.Nombre ?? request.NombreProducto;
+            var codigo = request.CodigoBarra ?? request.CodigoSku ?? request.Codigo;
+
+            if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(codigo))
             {
-                return Results.BadRequest(new { mensaje = "El nombre y el código SKU del producto son requeridos." });
+                return Results.BadRequest(new { mensaje = "El nombre y el código de barra/SKU del producto son requeridos." });
             }
 
             try
             {
-                var actualizado = await productoService.ActualizarAsync(id, request);
-                return actualizado != null
-                    ? Results.Ok(actualizado)
+                var exito = await productoService.ActualizarAsync(id, request);
+                return exito
+                    ? Results.Ok(new { mensaje = $"Producto con ID {id} actualizado exitosamente." })
                     : Results.NotFound(new { mensaje = $"Producto con ID {id} no encontrado." });
             }
             catch (InvalidOperationException ex)
@@ -126,8 +145,8 @@ public static class ProductoEndpoints
         .WithSummary("Actualiza los datos, existencias o precios de un producto");
 
         // Eliminar producto (baja lógica)
-        productosGroup.MapDelete("/{id:long}", async (
-            long id,
+        productosGroup.MapDelete("/{id:int}", async (
+            int id,
             [FromServices] IProductoService productoService) =>
         {
             var eliminado = await productoService.EliminarAsync(id);
@@ -138,7 +157,5 @@ public static class ProductoEndpoints
         .RequireAuthorization()
         .WithName("EliminarProducto")
         .WithSummary("Desactiva o da de baja un producto del catálogo");
-
-        return routes;
     }
 }

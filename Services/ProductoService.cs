@@ -40,7 +40,7 @@ public class ProductoService : IProductoService
         return _mapper.Map<IEnumerable<ProductoResponse>>(productos);
     }
 
-    public async Task<IEnumerable<ProductoResponse>> ObtenerActivosAsync()
+    public async Task<List<ProductoResponse>> ObtenerActivosAsync()
     {
         var productos = await _context.Productos
             .Include(p => p.IdCategoriaNavigation)
@@ -49,7 +49,7 @@ public class ProductoService : IProductoService
             .AsNoTracking()
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ProductoResponse>>(productos);
+        return _mapper.Map<List<ProductoResponse>>(productos);
     }
 
     public async Task<ProductoResponse?> ObtenerPorIdAsync(long id)
@@ -61,11 +61,16 @@ public class ProductoService : IProductoService
         return producto != null ? _mapper.Map<ProductoResponse>(producto) : null;
     }
 
-    public async Task<ProductoResponse?> ObtenerPorCodigoAsync(string codigoSku)
+    public async Task<ProductoResponse?> ObtenerPorIdAsync(int id)
     {
-        if (string.IsNullOrWhiteSpace(codigoSku)) return null;
+        return await ObtenerPorIdAsync((long)id);
+    }
 
-        var sku = codigoSku.Trim().ToLower();
+    public async Task<ProductoResponse?> ObtenerPorCodigoAsync(string codigo)
+    {
+        if (string.IsNullOrWhiteSpace(codigo)) return null;
+
+        var sku = codigo.Trim().ToLower();
         var producto = await _context.Productos
             .Include(p => p.IdCategoriaNavigation)
             .FirstOrDefaultAsync(p => p.CodigoSku.ToLower() == sku);
@@ -75,13 +80,13 @@ public class ProductoService : IProductoService
 
     public async Task<ProductoResponse> CrearAsync(ProductoRequest request)
     {
-        var sku = (request.CodigoSku ?? request.Codigo ?? string.Empty).Trim();
+        var sku = (request.CodigoSku ?? request.CodigoBarra ?? request.Codigo ?? string.Empty).Trim();
         var nombre = (request.NombreProducto ?? request.Nombre ?? string.Empty).Trim();
 
         var existeSku = await _context.Productos.AnyAsync(p => p.CodigoSku.ToLower() == sku.ToLower());
         if (existeSku)
         {
-            throw new InvalidOperationException($"Ya existe un producto registrado con el código SKU '{sku}'.");
+            throw new InvalidOperationException($"Ya existe un producto registrado con el código SKU/barras '{sku}'.");
         }
 
         var categoriaExiste = await _context.Categorias.AnyAsync(c => c.IdCategoria == request.IdCategoria);
@@ -96,11 +101,11 @@ public class ProductoService : IProductoService
             NombreProducto = nombre,
             CodigoSku = sku,
             CostoCompra = request.CostoCompra,
-            PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : (request.Precio ?? 0m),
-            StockActual = request.StockActual > 0 ? request.StockActual : (request.Stock ?? 0),
+            PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : request.Precio,
+            StockActual = request.StockActual > 0 ? request.StockActual : request.Stock,
             StockMinimo = request.StockMinimo,
             UrlImagen = request.UrlImagen,
-            EstadoActivo = request.Estado ?? request.EstadoActivo,
+            EstadoActivo = request.EstadoActivo,
             FechaCreacion = DateTime.UtcNow
         };
 
@@ -112,6 +117,12 @@ public class ProductoService : IProductoService
         return _mapper.Map<ProductoResponse>(producto);
     }
 
+    public async Task<bool> ActualizarAsync(int id, ProductoRequest request)
+    {
+        var res = await ActualizarAsync((long)id, request);
+        return res != null;
+    }
+
     public async Task<ProductoResponse?> ActualizarAsync(long id, ProductoRequest request)
     {
         var producto = await _context.Productos
@@ -120,7 +131,7 @@ public class ProductoService : IProductoService
 
         if (producto == null) return null;
 
-        var sku = (request.CodigoSku ?? request.Codigo ?? string.Empty).Trim();
+        var sku = (request.CodigoSku ?? request.CodigoBarra ?? request.Codigo ?? string.Empty).Trim();
         var nombre = (request.NombreProducto ?? request.Nombre ?? string.Empty).Trim();
 
         if (!string.Equals(producto.CodigoSku, sku, StringComparison.OrdinalIgnoreCase))
@@ -145,11 +156,11 @@ public class ProductoService : IProductoService
         producto.NombreProducto = nombre;
         producto.CodigoSku = sku;
         producto.CostoCompra = request.CostoCompra;
-        producto.PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : (request.Precio ?? producto.PrecioVenta);
-        producto.StockActual = request.StockActual >= 0 ? request.StockActual : (request.Stock ?? producto.StockActual);
+        producto.PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : request.Precio;
+        producto.StockActual = request.StockActual >= 0 ? request.StockActual : request.Stock;
         producto.StockMinimo = request.StockMinimo;
         producto.UrlImagen = request.UrlImagen;
-        producto.EstadoActivo = request.Estado ?? request.EstadoActivo;
+        producto.EstadoActivo = request.EstadoActivo;
 
         await _context.SaveChangesAsync();
 

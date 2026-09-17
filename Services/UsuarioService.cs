@@ -24,7 +24,7 @@ public class UsuarioService : IUsuarioService
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
     {
-        var correo = (request.CorreoElectronico ?? request.Usuario ?? string.Empty).Trim().ToLower();
+        var correo = (request.CorreoElectronico ?? request.UsuarioOCorreo ?? string.Empty).Trim().ToLower();
         var password = request.Clave ?? request.Password ?? string.Empty;
 
         if (string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(password))
@@ -65,21 +65,27 @@ public class UsuarioService : IUsuarioService
         return new LoginResponse
         {
             Token = token,
-            IdUsuario = usuario.IdUsuario,
-            NombreCompleto = usuario.NombreCompleto,
+            IdUsuario = usuario.IdUsuario.GetHashCode() & 0x7FFFFFFF,
+            IdUsuarioGuid = usuario.IdUsuario,
+            Nombre = usuario.NombreCompleto,
             Rol = rolNombre,
             Expiracion = expiracion
         };
     }
 
-    public async Task<IEnumerable<UsuarioResponse>> ObtenerTodosAsync()
+    public async Task<List<UsuarioResponse>> ObtenerUsuariosAsync()
     {
         var usuarios = await _context.Usuarios
             .Include(u => u.IdRolNavigation)
             .OrderBy(u => u.NombreCompleto)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<UsuarioResponse>>(usuarios);
+        return _mapper.Map<List<UsuarioResponse>>(usuarios);
+    }
+
+    public async Task<IEnumerable<UsuarioResponse>> ObtenerTodosAsync()
+    {
+        return await ObtenerUsuariosAsync();
     }
 
     public async Task<UsuarioResponse?> ObtenerPorIdAsync(Guid id)
@@ -91,7 +97,7 @@ public class UsuarioService : IUsuarioService
         return usuario != null ? _mapper.Map<UsuarioResponse>(usuario) : null;
     }
 
-    public async Task<UsuarioResponse> CrearUsuarioAsync(CrearUsuarioRequest request)
+    public async Task<UsuarioResponse> RegistrarUsuarioAsync(CrearUsuarioRequest request)
     {
         var correo = (request.CorreoElectronico ?? request.Correo ?? string.Empty).Trim().ToLower();
         var nombre = (request.NombreCompleto ?? request.Nombre ?? string.Empty).Trim();
@@ -122,10 +128,14 @@ public class UsuarioService : IUsuarioService
         _context.Usuarios.Add(nuevoUsuario);
         await _context.SaveChangesAsync();
 
-        // Cargar navegación de Rol
         await _context.Entry(nuevoUsuario).Reference(u => u.IdRolNavigation).LoadAsync();
 
         return _mapper.Map<UsuarioResponse>(nuevoUsuario);
+    }
+
+    public async Task<UsuarioResponse> CrearUsuarioAsync(CrearUsuarioRequest request)
+    {
+        return await RegistrarUsuarioAsync(request);
     }
 
     public async Task<bool> CambiarEstadoAsync(Guid id, bool activo)
@@ -140,9 +150,9 @@ public class UsuarioService : IUsuarioService
 
     public string GenerarJwtToken(Usuarios usuario, out DateTime expiracion)
     {
-        var secretKey = _configuration["Jwt:Key"] ?? "TiendaGoSecretKey_SuperSecureKeyForJWT2026!#*";
-        var issuer = _configuration["Jwt:Issuer"] ?? "TiendaGoApi";
-        var audience = _configuration["Jwt:Audience"] ?? "TiendaGoClient";
+        var secretKey = _configuration["Jwt:Key"] ?? "TuClaveSuperSecretaDeAlMenos32Caracteres!";
+        var issuer = _configuration["Jwt:Issuer"] ?? "TiendaGoAPI";
+        var audience = _configuration["Jwt:Audience"] ?? "TiendaGoApp";
         var expirationHours = int.TryParse(_configuration["Jwt:ExpirationHours"], out var hours) ? hours : 8;
 
         expiracion = DateTime.UtcNow.AddHours(expirationHours);
@@ -155,8 +165,8 @@ public class UsuarioService : IUsuarioService
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString()),
-            new(ClaimTypes.Email, usuario.CorreoElectronico),
             new(ClaimTypes.Name, usuario.NombreCompleto),
+            new(ClaimTypes.Email, usuario.CorreoElectronico),
             new(ClaimTypes.Role, rolNombre),
             new("id_rol", usuario.IdRol.ToString())
         };

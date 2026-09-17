@@ -1,8 +1,8 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Microsoft.EntityFrameworkCore;
 using TiendaGo.Endpoints;
 using TiendaGo.Mappings;
 using TiendaGo.Models;
@@ -11,7 +11,7 @@ using TiendaGo.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // =============================================
-// REGISTRO DE CONEXIÓN POSTGRESQL (EF CORE)
+// 1. REGISTRO DE CONEXIÓN POSTGRESQL (EF CORE)
 // =============================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Host=aws-0-us-west-2.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.ywxnbqblfazplkggkcgw;Password=TiendaGo123;SSL Mode=Require;Trust Server Certificate=true";
@@ -20,7 +20,7 @@ builder.Services.AddDbContext<TiendaGoDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // =============================================
-// 1. CONFIGURACIÓN DE SWAGGER / OPENAPI CON JWT
+// 2. CONFIGURACIÓN DE SWAGGER / OPENAPI CON JWT
 // =============================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -29,7 +29,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "TiendaGo Web API",
         Version = "v1",
-        Description = "API RESTful para el sistema POS Móvil y Gestión de Inventario TiendaGo (Supabase + .NET Core)"
+        Description = "API RESTful para el sistema POS Móvil y Gestión de Inventario TiendaGo (.NET Core API)"
     });
 
     // Definición de seguridad JWT Bearer
@@ -59,12 +59,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // =============================================
-// 2. CONFIGURACIÓN DE SUPABASE CLIENT
+// 3. CONFIGURACIÓN DE SUPABASE CLIENT
 // =============================================
 var supabaseUrl = builder.Configuration["Supabase:Url"] 
-    ?? throw new InvalidOperationException("Supabase:Url no está configurado en appsettings.json.");
+    ?? "https://ywxnbqblfazplkggkcgw.supabase.co";
 var supabaseKey = builder.Configuration["Supabase:AnonKey"] 
-    ?? throw new InvalidOperationException("Supabase:AnonKey no está configurado en appsettings.json.");
+    ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3eG5icWJsZmF6cGxrZ2drY2d3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNTA2NjUsImV4cCI6MjEwNDYyNjY2NX0.oONIsM-8WiYV1PJZPhIlxHL-gpO0JDQ58VmQ6zgBPq8";
 
 builder.Services.AddScoped<Supabase.Client>(_ => new Supabase.Client(supabaseUrl, supabaseKey, new Supabase.SupabaseOptions
 {
@@ -73,26 +73,26 @@ builder.Services.AddScoped<Supabase.Client>(_ => new Supabase.Client(supabaseUrl
 }));
 
 // =============================================
-// 3. INYECCIÓN DE DEPENDENCIAS (SERVICIOS Y MAPPER)
+// 4. INYECCIÓN DE DEPENDENCIAS (AUTOMAPPER Y SERVICIOS)
 // =============================================
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<CatalogoMappingProfile>();
     cfg.AddProfile<VentasMappingProfile>();
 });
+
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<ITurnoCajaService, TurnoCajaService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
-
 // =============================================
-// 4. AUTENTICACIÓN JWT Y AUTORIZACIÓN
+// 5. AUTENTICACIÓN JWT Y AUTORIZACIÓN
 // =============================================
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "TiendaGoSecretKey_SuperSecureKeyForJWT2026!#*";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TiendaGoApi";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "TiendaGoClient";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "TuClaveSuperSecretaDeAlMenos32Caracteres!";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TiendaGoAPI";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "TiendaGoApp";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -119,7 +119,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // =============================================
-// 5. CORS (CLIENTE MÓVIL Y WEB)
+// 6. CORS (CLIENTE MÓVIL Y WEB)
 // =============================================
 builder.Services.AddCors(options =>
 {
@@ -134,7 +134,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // =============================================
-// 6. PIPELINE DE MIDDLEWARES HTTP
+// 7. PIPELINE DE MIDDLEWARES HTTP
 // =============================================
 if (app.Environment.IsDevelopment())
 {
@@ -150,7 +150,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // =============================================
-// 7. MAPEO DE GRUPOS DE ENDPOINTS
+// 8. MAPEO DE GRUPOS DE ENDPOINTS
 // =============================================
 app.MapUsuarioEndpoints();
 app.MapProductoEndpoints();

@@ -6,7 +6,7 @@ namespace TiendaGo.Endpoints;
 
 public static class UsuarioEndpoints
 {
-    public static IEndpointRouteBuilder MapUsuarioEndpoints(this IEndpointRouteBuilder routes)
+    public static void MapUsuarioEndpoints(this IEndpointRouteBuilder routes)
     {
         // =============================================
         // GRUPO: /api/auth (Autenticación y Login)
@@ -18,10 +18,10 @@ public static class UsuarioEndpoints
             [FromBody] LoginRequest request,
             [FromServices] IUsuarioService usuarioService) =>
         {
-            var correo = request.CorreoElectronico ?? request.Usuario;
-            var password = request.Clave ?? request.Password;
+            var usuarioOCorreo = request.UsuarioOCorreo ?? request.CorreoElectronico;
+            var password = request.Password ?? request.Clave;
 
-            if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(password))
+            if (string.IsNullOrWhiteSpace(usuarioOCorreo) || string.IsNullOrWhiteSpace(password))
             {
                 return Results.BadRequest(new { mensaje = "El usuario/correo y la contraseña son requeridos." });
             }
@@ -47,7 +47,7 @@ public static class UsuarioEndpoints
 
         usuariosGroup.MapGet("/", async ([FromServices] IUsuarioService usuarioService) =>
         {
-            var usuarios = await usuarioService.ObtenerTodosAsync();
+            var usuarios = await usuarioService.ObtenerUsuariosAsync();
             return Results.Ok(usuarios);
         })
         .WithName("ObtenerUsuarios")
@@ -69,9 +69,9 @@ public static class UsuarioEndpoints
             [FromBody] CrearUsuarioRequest request,
             [FromServices] IUsuarioService usuarioService) =>
         {
-            var correo = request.CorreoElectronico ?? request.Correo;
-            var nombre = request.NombreCompleto ?? request.Nombre;
-            var password = request.Clave ?? request.Password;
+            var correo = request.Correo ?? request.CorreoElectronico;
+            var nombre = request.Nombre ?? request.NombreCompleto;
+            var password = request.Password ?? request.Clave;
 
             if (string.IsNullOrWhiteSpace(correo) ||
                 string.IsNullOrWhiteSpace(password) ||
@@ -82,7 +82,7 @@ public static class UsuarioEndpoints
 
             try
             {
-                var nuevoUsuario = await usuarioService.CrearUsuarioAsync(request);
+                var nuevoUsuario = await usuarioService.RegistrarUsuarioAsync(request);
                 return Results.Created($"/api/usuarios/{nuevoUsuario.IdUsuario}", nuevoUsuario);
             }
             catch (Exception ex)
@@ -105,7 +105,5 @@ public static class UsuarioEndpoints
         })
         .WithName("CambiarEstadoUsuario")
         .WithSummary("Activa o desactiva el acceso de un usuario");
-
-        return routes;
     }
 }

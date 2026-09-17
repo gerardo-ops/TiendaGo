@@ -2,19 +2,19 @@ namespace TiendaGo.DTOs.Usuarios;
 
 public class LoginRequest
 {
-    public string CorreoElectronico { get; set; } = string.Empty;
-    public string Clave { get; set; } = string.Empty;
+    public string UsuarioOCorreo { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 
     // Aliases para compatibilidad
-    public string? Usuario
+    public string CorreoElectronico
     {
-        get => CorreoElectronico;
-        set => CorreoElectronico = value ?? string.Empty;
+        get => UsuarioOCorreo;
+        set => UsuarioOCorreo = value ?? string.Empty;
     }
 
-    public string? Password
+    public string Clave
     {
-        get => Clave;
-        set => Clave = value ?? string.Empty;
+        get => Password;
+        set => Password = value ?? string.Empty;
     }
 }

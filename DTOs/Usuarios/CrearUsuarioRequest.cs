@@ -2,27 +2,27 @@ namespace TiendaGo.DTOs.Usuarios;
 
 public class CrearUsuarioRequest
 {
-    public string NombreCompleto { get; set; } = string.Empty;
-    public string CorreoElectronico { get; set; } = string.Empty;
-    public string Clave { get; set; } = string.Empty;
-    public long IdRol { get; set; } = 2; // Default 2: Cajero
+    public string Nombre { get; set; } = string.Empty;
+    public string Correo { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public int IdRol { get; set; } = 2; // Default 2: Cajero
 
-    // Aliases
-    public string? Nombre
+    // Aliases para compatibilidad
+    public string NombreCompleto
     {
-        get => NombreCompleto;
-        set => NombreCompleto = value ?? string.Empty;
+        get => Nombre;
+        set => Nombre = value ?? string.Empty;
     }
 
-    public string? Correo
+    public string CorreoElectronico
     {
-        get => CorreoElectronico;
-        set => CorreoElectronico = value ?? string.Empty;
+        get => Correo;
+        set => Correo = value ?? string.Empty;
     }
 
-    public string? Password
+    public string Clave
     {
-        get => Clave;
-        set => Clave = value ?? string.Empty;
+        get => Password;
+        set => Password = value ?? string.Empty;
     }
 }
