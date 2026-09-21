@@ -48,7 +48,7 @@ public static class ProductoEndpoints
         .WithName("ObtenerProductoPorId")
         .WithSummary("Consulta la ficha detallada de un producto por su ID");
 
-        // Obtener producto por código SKU / barras
+        // Obtener producto por código SKU / barras (escaneo QR o código de barras)
         productosGroup.MapGet("/buscar/{codigo}", async (
             string codigo,
             [FromServices] IProductoService productoService) =>
@@ -56,10 +56,10 @@ public static class ProductoEndpoints
             var producto = await productoService.ObtenerPorCodigoAsync(codigo);
             return producto != null
                 ? Results.Ok(producto)
-                : Results.NotFound(new { mensaje = $"Producto con código '{codigo}' no encontrado." });
+                : Results.NotFound(new { mensaje = "Producto no encontrado para el código escaneado" });
         })
         .WithName("BuscarProductoPorCodigo")
-        .WithSummary("Consulta un producto por su código de barras o SKU");
+        .WithSummary("Consulta un producto por su código de barras o QR escaneado");
 
         // Ruta alternativa por SKU
         productosGroup.MapGet("/sku/{sku}", async (
@@ -69,7 +69,7 @@ public static class ProductoEndpoints
             var producto = await productoService.ObtenerPorCodigoAsync(sku);
             return producto != null
                 ? Results.Ok(producto)
-                : Results.NotFound(new { mensaje = $"Producto con código SKU '{sku}' no encontrado." });
+                : Results.NotFound(new { mensaje = "Producto no encontrado para el código escaneado" });
         })
         .WithName("ObtenerProductoPorSku")
         .WithSummary("Consulta un producto por código de barras o SKU");

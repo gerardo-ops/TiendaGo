@@ -70,10 +70,17 @@ public class ProductoService : IProductoService
     {
         if (string.IsNullOrWhiteSpace(codigo)) return null;
 
-        var sku = codigo.Trim().ToLower();
+        var codigoLimpio = codigo.Trim();
+        var codigoSinEspacios = codigoLimpio.Replace(" ", "");
+
+        // Búsqueda insensible a formato, espacios y mayúsculas/minúsculas para códigos QR o barras de productos activos
         var producto = await _context.Productos
             .Include(p => p.IdCategoriaNavigation)
-            .FirstOrDefaultAsync(p => p.CodigoSku.ToLower() == sku);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.EstadoActivo &&
+                (p.CodigoSku.ToLower() == codigoLimpio.ToLower() ||
+                 p.CodigoSku.ToLower() == codigoSinEspacios.ToLower() ||
+                 p.CodigoSku.Replace(" ", "").ToLower() == codigoSinEspacios.ToLower()));
 
         return producto != null ? _mapper.Map<ProductoResponse>(producto) : null;
     }
