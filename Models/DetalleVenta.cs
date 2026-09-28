@@ -12,13 +12,15 @@ public class DetalleVenta : BaseModel
     [Column("id_venta")]
     public long IdVenta { get; set; }
 
-    [Reference(typeof(Venta))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Venta? Venta { get; set; }
 
     [Column("id_producto")]
     public long IdProducto { get; set; }
 
-    [Reference(typeof(Producto))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Producto? Producto { get; set; }
 
     [Column("cantidad")]

@@ -2,8 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Supabase.Gotrue;
 using TiendaGo.DTOs.Usuarios;
 using TiendaGo.Models;
 
@@ -11,52 +11,42 @@ namespace TiendaGo.Services;
 
 public class UsuarioService : IUsuarioService
 {
-    private readonly Supabase.Client _supabase;
+    private readonly TiendaGoDbContext _context;
     private readonly IMapper _mapper;
     private readonly IConfiguration _configuration;
 
-    public UsuarioService(Supabase.Client supabase, IMapper mapper, IConfiguration configuration)
+    public UsuarioService(TiendaGoDbContext context, IMapper mapper, IConfiguration configuration)
     {
-        _supabase = supabase;
+        _context = context;
         _mapper = mapper;
         _configuration = configuration;
     }
 
-    public async Task<UsuarioResponse?> LoginAsync(LoginRequest request)
+    public async Task<LoginResponse?> LoginAsync(LoginRequest request)
     {
-        // 1. Buscar usuario en base de datos por correo
-        var usuariosResponse = await _supabase.From<Usuario>()
-            .Where(u => u.CorreoElectronico == request.CorreoElectronico)
-            .Get();
+        var correo = (request.CorreoElectronico ?? request.UsuarioOCorreo ?? string.Empty).Trim().ToLower();
+        var password = request.Clave ?? request.Password ?? string.Empty;
 
-        var usuario = usuariosResponse.Models.FirstOrDefault();
+        if (string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(password))
+        {
+            return null;
+        }
+
+        var usuario = await _context.Usuarios
+            .Include(u => u.IdRolNavigation)
+            .FirstOrDefaultAsync(u => u.CorreoElectronico.ToLower() == correo);
+
         if (usuario == null || !usuario.EstadoActivo)
         {
             return null;
         }
 
         bool passwordValida = false;
-
-        // Intentar autenticación con Supabase Auth primero
-        try
-        {
-            var authResponse = await _supabase.Auth.SignInWithPassword(request.CorreoElectronico, request.Clave);
-            if (authResponse?.User != null)
-            {
-                passwordValida = true;
-            }
-        }
-        catch
-        {
-            // Si falla la llamada directa de Supabase Auth, se evalúa el hash local si está presente
-        }
-
-        // Si no validó por Supabase Auth, verificar con clave_hash (BCrypt)
-        if (!passwordValida && !string.IsNullOrEmpty(usuario.ClaveHash))
+        if (!string.IsNullOrEmpty(usuario.ClaveHash))
         {
             try
             {
-                passwordValida = BCrypt.Net.BCrypt.Verify(request.Clave, usuario.ClaveHash);
+                passwordValida = BCrypt.Net.BCrypt.Verify(password, usuario.ClaveHash);
             }
             catch
             {
@@ -69,148 +59,115 @@ public class UsuarioService : IUsuarioService
             return null;
         }
 
-        // Obtener rol
-        var rol = await ObtenerRolPorIdAsync(usuario.IdRol);
-        usuario.Rol = rol;
+        var token = GenerarJwtToken(usuario, out var expiracion);
+        var rolNombre = usuario.IdRolNavigation?.NombreRol ?? "Cajero";
 
-        var response = _mapper.Map<UsuarioResponse>(usuario);
-        response.Token = GenerarJwtToken(response);
+        return new LoginResponse
+        {
+            Token = token,
+            IdUsuario = usuario.IdUsuario.GetHashCode() & 0x7FFFFFFF,
+            IdUsuarioGuid = usuario.IdUsuario,
+            Nombre = usuario.NombreCompleto,
+            Rol = rolNombre,
+            Expiracion = expiracion
+        };
+    }
 
-        return response;
+    public async Task<List<UsuarioResponse>> ObtenerUsuariosAsync()
+    {
+        var usuarios = await _context.Usuarios
+            .Include(u => u.IdRolNavigation)
+            .OrderBy(u => u.NombreCompleto)
+            .ToListAsync();
+
+        return _mapper.Map<List<UsuarioResponse>>(usuarios);
     }
 
     public async Task<IEnumerable<UsuarioResponse>> ObtenerTodosAsync()
     {
-        var usuariosResponse = await _supabase.From<Usuario>().Get();
-        var usuarios = usuariosResponse.Models;
-
-        var rolesResponse = await _supabase.From<Rol>().Get();
-        var rolesDict = rolesResponse.Models.ToDictionary(r => r.IdRol, r => r);
-
-        var resultado = new List<UsuarioResponse>();
-        foreach (var user in usuarios)
-        {
-            if (rolesDict.TryGetValue(user.IdRol, out var rol))
-            {
-                user.Rol = rol;
-            }
-            resultado.Add(_mapper.Map<UsuarioResponse>(user));
-        }
-
-        return resultado;
+        return await ObtenerUsuariosAsync();
     }
 
     public async Task<UsuarioResponse?> ObtenerPorIdAsync(Guid id)
     {
-        var response = await _supabase.From<Usuario>()
-            .Where(u => u.IdUsuario == id)
-            .Get();
+        var usuario = await _context.Usuarios
+            .Include(u => u.IdRolNavigation)
+            .FirstOrDefaultAsync(u => u.IdUsuario == id);
 
-        var usuario = response.Models.FirstOrDefault();
-        if (usuario == null) return null;
+        return usuario != null ? _mapper.Map<UsuarioResponse>(usuario) : null;
+    }
 
-        usuario.Rol = await ObtenerRolPorIdAsync(usuario.IdRol);
-        return _mapper.Map<UsuarioResponse>(usuario);
+    public async Task<UsuarioResponse> RegistrarUsuarioAsync(CrearUsuarioRequest request)
+    {
+        var correo = (request.CorreoElectronico ?? request.Correo ?? string.Empty).Trim().ToLower();
+        var nombre = (request.NombreCompleto ?? request.Nombre ?? string.Empty).Trim();
+        var password = request.Clave ?? request.Password ?? string.Empty;
+
+        var existe = await _context.Usuarios.AnyAsync(u => u.CorreoElectronico.ToLower() == correo);
+        if (existe)
+        {
+            throw new InvalidOperationException($"El correo '{correo}' ya se encuentra registrado en el sistema.");
+        }
+
+        var rolExiste = await _context.Roles.AnyAsync(r => r.IdRol == request.IdRol);
+        var idRol = rolExiste ? request.IdRol : 2; // Default a Cajero (2) si no existe
+
+        string claveHash = BCrypt.Net.BCrypt.HashPassword(password);
+
+        var nuevoUsuario = new Usuarios
+        {
+            IdUsuario = Guid.NewGuid(),
+            IdRol = idRol,
+            NombreCompleto = nombre,
+            CorreoElectronico = correo,
+            ClaveHash = claveHash,
+            EstadoActivo = true,
+            FechaRegistro = DateTime.UtcNow
+        };
+
+        _context.Usuarios.Add(nuevoUsuario);
+        await _context.SaveChangesAsync();
+
+        await _context.Entry(nuevoUsuario).Reference(u => u.IdRolNavigation).LoadAsync();
+
+        return _mapper.Map<UsuarioResponse>(nuevoUsuario);
     }
 
     public async Task<UsuarioResponse> CrearUsuarioAsync(CrearUsuarioRequest request)
     {
-        string claveHash = BCrypt.Net.BCrypt.HashPassword(request.Clave);
-        Guid idUsuario = Guid.NewGuid();
-
-        // Crear usuario en Supabase Auth
-        try
-        {
-            var options = new SignUpOptions
-            {
-                Data = new Dictionary<string, object>
-                {
-                    { "nombre_completo", request.NombreCompleto },
-                    { "id_rol", request.IdRol }
-                }
-            };
-            var session = await _supabase.Auth.SignUp(request.CorreoElectronico, request.Clave, options);
-            if (session?.User != null && Guid.TryParse(session.User.Id, out var parsedGuid))
-            {
-                idUsuario = parsedGuid;
-            }
-        }
-        catch
-        {
-            // Continuar con creación del registro
-        }
-
-        // Validar si el trigger on_auth_user_created_tiendago ya creó el registro
-        var existente = await _supabase.From<Usuario>()
-            .Where(u => u.CorreoElectronico == request.CorreoElectronico)
-            .Get();
-
-        Usuario usuario;
-        if (existente.Models.Count > 0)
-        {
-            usuario = existente.Models.First();
-            usuario.IdRol = request.IdRol;
-            usuario.ClaveHash = claveHash;
-            usuario.NombreCompleto = request.NombreCompleto;
-
-            await _supabase.From<Usuario>()
-                .Where(u => u.IdUsuario == usuario.IdUsuario)
-                .Update(usuario);
-        }
-        else
-        {
-            usuario = new Usuario
-            {
-                IdUsuario = idUsuario,
-                IdRol = request.IdRol,
-                NombreCompleto = request.NombreCompleto,
-                CorreoElectronico = request.CorreoElectronico,
-                ClaveHash = claveHash,
-                EstadoActivo = true,
-                FechaRegistro = DateTimeOffset.UtcNow
-            };
-
-            var insertResponse = await _supabase.From<Usuario>().Insert(usuario);
-            usuario = insertResponse.Models.FirstOrDefault() ?? usuario;
-        }
-
-        usuario.Rol = await ObtenerRolPorIdAsync(usuario.IdRol);
-        return _mapper.Map<UsuarioResponse>(usuario);
+        return await RegistrarUsuarioAsync(request);
     }
 
     public async Task<bool> CambiarEstadoAsync(Guid id, bool activo)
     {
-        var response = await _supabase.From<Usuario>()
-            .Where(u => u.IdUsuario == id)
-            .Get();
-
-        var usuario = response.Models.FirstOrDefault();
+        var usuario = await _context.Usuarios.FindAsync(id);
         if (usuario == null) return false;
 
         usuario.EstadoActivo = activo;
-        await _supabase.From<Usuario>()
-            .Where(u => u.IdUsuario == id)
-            .Update(usuario);
-
+        await _context.SaveChangesAsync();
         return true;
     }
 
-    public string GenerarJwtToken(UsuarioResponse usuario)
+    public string GenerarJwtToken(Usuarios usuario, out DateTime expiracion)
     {
-        var secretKey = _configuration["Jwt:Key"] ?? "ClaveSecretaPorDefectoParaTiendaGoApi2026!#*";
-        var issuer = _configuration["Jwt:Issuer"] ?? "TiendaGoApi";
-        var audience = _configuration["Jwt:Audience"] ?? "TiendaGoClient";
+        var secretKey = _configuration["Jwt:Key"] ?? "TuClaveSuperSecretaDeAlMenos32Caracteres!";
+        var issuer = _configuration["Jwt:Issuer"] ?? "TiendaGoAPI";
+        var audience = _configuration["Jwt:Audience"] ?? "TiendaGoApp";
         var expirationHours = int.TryParse(_configuration["Jwt:ExpirationHours"], out var hours) ? hours : 8;
+
+        expiracion = DateTime.UtcNow.AddHours(expirationHours);
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var rolNombre = usuario.IdRolNavigation?.NombreRol ?? "Cajero";
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString()),
-            new(ClaimTypes.Email, usuario.CorreoElectronico),
             new(ClaimTypes.Name, usuario.NombreCompleto),
-            new(ClaimTypes.Role, string.IsNullOrEmpty(usuario.NombreRol) ? "Cajero" : usuario.NombreRol),
+            new(ClaimTypes.Email, usuario.CorreoElectronico),
+            new(ClaimTypes.Role, rolNombre),
             new("id_rol", usuario.IdRol.ToString())
         };
 
@@ -218,19 +175,10 @@ public class UsuarioService : IUsuarioService
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(expirationHours),
+            expires: expiracion,
             signingCredentials: creds
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private async Task<Rol?> ObtenerRolPorIdAsync(long idRol)
-    {
-        var rolResponse = await _supabase.From<Rol>()
-            .Where(r => r.IdRol == idRol)
-            .Get();
-
-        return rolResponse.Models.FirstOrDefault();
     }
 }

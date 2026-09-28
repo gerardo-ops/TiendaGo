@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TiendaGo.DTOs.Usuarios;
+using TiendaGo.Models;
 using TiendaGo.Services;
 
 namespace TiendaGo.Endpoints;
 
 public static class UsuarioEndpoints
 {
-    public static IEndpointRouteBuilder MapUsuarioEndpoints(this IEndpointRouteBuilder routes)
+    public static void MapUsuarioEndpoints(this IEndpointRouteBuilder routes)
     {
         // =============================================
         // GRUPO: /api/auth (Autenticación y Login)
@@ -18,27 +20,104 @@ public static class UsuarioEndpoints
             [FromBody] LoginRequest request,
             [FromServices] IUsuarioService usuarioService) =>
         {
-            if (string.IsNullOrWhiteSpace(request.CorreoElectronico) || string.IsNullOrWhiteSpace(request.Clave))
+            var usuarioOCorreo = request.UsuarioOCorreo ?? request.CorreoElectronico;
+            var password = request.Password ?? request.Clave;
+
+            if (string.IsNullOrWhiteSpace(usuarioOCorreo) || string.IsNullOrWhiteSpace(password))
             {
-                return Results.BadRequest(new { mensaje = "El correo y la contraseña son requeridos." });
+                return Results.BadRequest(new { mensaje = "El usuario/correo y la contraseña son requeridos." });
             }
 
-            var usuario = await usuarioService.LoginAsync(request);
-            if (usuario == null)
+            var loginResponse = await usuarioService.LoginAsync(request);
+            if (loginResponse == null)
             {
                 return Results.Unauthorized();
             }
 
-            return Results.Ok(new
-            {
-                mensaje = "Inicio de sesión exitoso.",
-                token = usuario.Token,
-                usuario
-            });
+            return Results.Ok(loginResponse);
         })
         .AllowAnonymous()
         .WithName("Login")
         .WithSummary("Inicia sesión y genera token Bearer JWT");
+
+        authGroup.MapPost("/seed-admin", async ([FromServices] TiendaGoDbContext context) =>
+        {
+            try
+            {
+                // 1. Verificar o insertar roles base
+                var roles = await context.Roles.ToListAsync();
+                if (!roles.Any())
+                {
+                    var rAdmin = new Roles { IdRol = 1, NombreRol = "Administrador", Descripcion = "Acceso total al sistema y configuraciones" };
+                    var rCajero = new Roles { IdRol = 2, NombreRol = "Cajero", Descripcion = "Operaciones de venta y terminal POS" };
+                    var rSupervisor = new Roles { IdRol = 3, NombreRol = "Supervisor", Descripcion = "Arqueos de caja y supervisión" };
+                    context.Roles.AddRange(rAdmin, rCajero, rSupervisor);
+                    await context.SaveChangesAsync();
+                    roles = await context.Roles.ToListAsync();
+                }
+
+                var adminRol = roles.FirstOrDefault(r => r.NombreRol.Equals("Administrador", StringComparison.OrdinalIgnoreCase))
+                               ?? roles.First();
+
+                // 2. Sembrar o actualizar usuario admin
+                var correoAdmin = "admin@tiendago.com";
+                var claveAdmin = "Admin123*";
+                var usuarioExistente = await context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico.ToLower() == correoAdmin);
+
+                string hash = BCrypt.Net.BCrypt.HashPassword(claveAdmin);
+
+                if (usuarioExistente != null)
+                {
+                    usuarioExistente.ClaveHash = hash;
+                    usuarioExistente.IdRol = adminRol.IdRol;
+                    usuarioExistente.EstadoActivo = true;
+                    await context.SaveChangesAsync();
+                    return Results.Ok(new
+                    {
+                        mensaje = "Usuario administrador ya existía; credenciales y rol actualizados exitosamente.",
+                        idUsuario = usuarioExistente.IdUsuario,
+                        correo = usuarioExistente.CorreoElectronico,
+                        rol = adminRol.NombreRol,
+                        estadoActivo = usuarioExistente.EstadoActivo
+                    });
+                }
+
+                var nuevoAdmin = new Usuarios
+                {
+                    IdUsuario = Guid.NewGuid(),
+                    IdRol = adminRol.IdRol,
+                    NombreCompleto = "Administrador TiendaGo",
+                    CorreoElectronico = correoAdmin,
+                    ClaveHash = hash,
+                    EstadoActivo = true,
+                    FechaRegistro = DateTime.UtcNow
+                };
+
+                context.Usuarios.Add(nuevoAdmin);
+                await context.SaveChangesAsync();
+
+                return Results.Ok(new
+                {
+                    mensaje = "Usuario administrador creado exitosamente.",
+                    idUsuario = nuevoAdmin.IdUsuario,
+                    correo = nuevoAdmin.CorreoElectronico,
+                    rol = adminRol.NombreRol,
+                    estadoActivo = nuevoAdmin.EstadoActivo
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new
+                {
+                    mensaje = "Error al sembrar usuario administrador en Supabase.",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        })
+        .AllowAnonymous()
+        .WithName("SeedAdmin")
+        .WithSummary("Crea o actualiza el usuario administrador por defecto (admin@tiendago.com / Admin123*)");
 
         // =============================================
         // GRUPO: /api/usuarios (Administración de Usuarios)
@@ -49,7 +128,7 @@ public static class UsuarioEndpoints
 
         usuariosGroup.MapGet("/", async ([FromServices] IUsuarioService usuarioService) =>
         {
-            var usuarios = await usuarioService.ObtenerTodosAsync();
+            var usuarios = await usuarioService.ObtenerUsuariosAsync();
             return Results.Ok(usuarios);
         })
         .WithName("ObtenerUsuarios")
@@ -71,16 +150,20 @@ public static class UsuarioEndpoints
             [FromBody] CrearUsuarioRequest request,
             [FromServices] IUsuarioService usuarioService) =>
         {
-            if (string.IsNullOrWhiteSpace(request.CorreoElectronico) ||
-                string.IsNullOrWhiteSpace(request.Clave) ||
-                string.IsNullOrWhiteSpace(request.NombreCompleto))
+            var correo = request.Correo ?? request.CorreoElectronico;
+            var nombre = request.Nombre ?? request.NombreCompleto;
+            var password = request.Password ?? request.Clave;
+
+            if (string.IsNullOrWhiteSpace(correo) ||
+                string.IsNullOrWhiteSpace(password) ||
+                string.IsNullOrWhiteSpace(nombre))
             {
                 return Results.BadRequest(new { mensaje = "Nombre completo, correo y contraseña son obligatorios." });
             }
 
             try
             {
-                var nuevoUsuario = await usuarioService.CrearUsuarioAsync(request);
+                var nuevoUsuario = await usuarioService.RegistrarUsuarioAsync(request);
                 return Results.Created($"/api/usuarios/{nuevoUsuario.IdUsuario}", nuevoUsuario);
             }
             catch (Exception ex)
@@ -103,7 +186,5 @@ public static class UsuarioEndpoints
         })
         .WithName("CambiarEstadoUsuario")
         .WithSummary("Activa o desactiva el acceso de un usuario");
-
-        return routes;
     }
 }

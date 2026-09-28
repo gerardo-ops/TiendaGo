@@ -12,7 +12,8 @@ public class Producto : BaseModel
     [Column("id_categoria")]
     public long IdCategoria { get; set; }
 
-    [Reference(typeof(Categoria))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Categoria? Categoria { get; set; }
 
     [Column("nombre_producto")]

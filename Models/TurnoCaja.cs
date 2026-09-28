@@ -12,7 +12,8 @@ public class TurnoCaja : BaseModel
     [Column("id_usuario")]
     public Guid IdUsuario { get; set; }
 
-    [Reference(typeof(Usuario))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Usuario? Usuario { get; set; }
 
     [Column("fecha_apertura")]
