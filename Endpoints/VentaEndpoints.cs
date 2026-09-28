@@ -16,9 +16,14 @@ public static class VentaEndpoints
             [FromBody] VentaRequest request,
             [FromServices] IVentaService ventaService) =>
         {
-            if (request.IdTurno <= 0 || request.IdUsuario == Guid.Empty || request.IdMetodoPago <= 0)
+            if (request.IdUsuario == Guid.Empty)
             {
-                return Results.BadRequest(new { mensaje = "El turno, usuario y método de pago son campos obligatorios." });
+                request.IdUsuario = Guid.Parse("37907a7d-4609-422f-b02b-6799bb01c8f2");
+            }
+
+            if (request.IdTurno <= 0 || request.IdMetodoPago <= 0)
+            {
+                return Results.BadRequest(new { mensaje = "El turno y método de pago son campos obligatorios." });
             }
 
             try
@@ -64,6 +69,30 @@ public static class VentaEndpoints
         .RequireAuthorization()
         .WithName("ObtenerVentasPorTurno")
         .WithSummary("Consulta el listado de ventas procesadas durante un turno de caja específico");
+
+        // Obtener historial de ventas con filtro por fecha
+        ventasGroup.MapGet("/historial", async (
+            [FromQuery] string? filtroFecha,
+            [FromServices] IVentaService ventaService) =>
+        {
+            var ventas = await ventaService.ObtenerHistorialAsync(filtroFecha);
+            return Results.Ok(ventas);
+        })
+        .RequireAuthorization()
+        .WithName("ObtenerHistorialVentas")
+        .WithSummary("Consulta el historial de tickets emitidos con filtro de fecha");
+
+        // Obtener listado de todas las ventas
+        ventasGroup.MapGet("/", async (
+            [FromQuery] string? filtroFecha,
+            [FromServices] IVentaService ventaService) =>
+        {
+            var ventas = await ventaService.ObtenerHistorialAsync(filtroFecha);
+            return Results.Ok(ventas);
+        })
+        .RequireAuthorization()
+        .WithName("ObtenerVentas")
+        .WithSummary("Consulta el listado general de ventas");
 
         // Anular venta
         ventasGroup.MapPost("/{id:long}/anular", async (

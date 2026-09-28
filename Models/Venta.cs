@@ -12,19 +12,22 @@ public class Venta : BaseModel
     [Column("id_turno")]
     public long IdTurno { get; set; }
 
-    [Reference(typeof(TurnoCaja))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public TurnoCaja? TurnoCaja { get; set; }
 
     [Column("id_usuario")]
     public Guid IdUsuario { get; set; }
 
-    [Reference(typeof(Usuario))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Usuario? Usuario { get; set; }
 
     [Column("id_metodo_pago")]
     public long IdMetodoPago { get; set; }
 
-    [Reference(typeof(MetodoPago))]
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public MetodoPago? MetodoPago { get; set; }
 
     [Column("numero_ticket")]

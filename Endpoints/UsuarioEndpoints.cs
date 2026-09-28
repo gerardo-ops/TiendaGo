@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TiendaGo.DTOs.Usuarios;
+using TiendaGo.Models;
 using TiendaGo.Services;
 
 namespace TiendaGo.Endpoints;
@@ -37,6 +39,85 @@ public static class UsuarioEndpoints
         .AllowAnonymous()
         .WithName("Login")
         .WithSummary("Inicia sesión y genera token Bearer JWT");
+
+        authGroup.MapPost("/seed-admin", async ([FromServices] TiendaGoDbContext context) =>
+        {
+            try
+            {
+                // 1. Verificar o insertar roles base
+                var roles = await context.Roles.ToListAsync();
+                if (!roles.Any())
+                {
+                    var rAdmin = new Roles { IdRol = 1, NombreRol = "Administrador", Descripcion = "Acceso total al sistema y configuraciones" };
+                    var rCajero = new Roles { IdRol = 2, NombreRol = "Cajero", Descripcion = "Operaciones de venta y terminal POS" };
+                    var rSupervisor = new Roles { IdRol = 3, NombreRol = "Supervisor", Descripcion = "Arqueos de caja y supervisión" };
+                    context.Roles.AddRange(rAdmin, rCajero, rSupervisor);
+                    await context.SaveChangesAsync();
+                    roles = await context.Roles.ToListAsync();
+                }
+
+                var adminRol = roles.FirstOrDefault(r => r.NombreRol.Equals("Administrador", StringComparison.OrdinalIgnoreCase))
+                               ?? roles.First();
+
+                // 2. Sembrar o actualizar usuario admin
+                var correoAdmin = "admin@tiendago.com";
+                var claveAdmin = "Admin123*";
+                var usuarioExistente = await context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico.ToLower() == correoAdmin);
+
+                string hash = BCrypt.Net.BCrypt.HashPassword(claveAdmin);
+
+                if (usuarioExistente != null)
+                {
+                    usuarioExistente.ClaveHash = hash;
+                    usuarioExistente.IdRol = adminRol.IdRol;
+                    usuarioExistente.EstadoActivo = true;
+                    await context.SaveChangesAsync();
+                    return Results.Ok(new
+                    {
+                        mensaje = "Usuario administrador ya existía; credenciales y rol actualizados exitosamente.",
+                        idUsuario = usuarioExistente.IdUsuario,
+                        correo = usuarioExistente.CorreoElectronico,
+                        rol = adminRol.NombreRol,
+                        estadoActivo = usuarioExistente.EstadoActivo
+                    });
+                }
+
+                var nuevoAdmin = new Usuarios
+                {
+                    IdUsuario = Guid.NewGuid(),
+                    IdRol = adminRol.IdRol,
+                    NombreCompleto = "Administrador TiendaGo",
+                    CorreoElectronico = correoAdmin,
+                    ClaveHash = hash,
+                    EstadoActivo = true,
+                    FechaRegistro = DateTime.UtcNow
+                };
+
+                context.Usuarios.Add(nuevoAdmin);
+                await context.SaveChangesAsync();
+
+                return Results.Ok(new
+                {
+                    mensaje = "Usuario administrador creado exitosamente.",
+                    idUsuario = nuevoAdmin.IdUsuario,
+                    correo = nuevoAdmin.CorreoElectronico,
+                    rol = adminRol.NombreRol,
+                    estadoActivo = nuevoAdmin.EstadoActivo
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new
+                {
+                    mensaje = "Error al sembrar usuario administrador en Supabase.",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        })
+        .AllowAnonymous()
+        .WithName("SeedAdmin")
+        .WithSummary("Crea o actualiza el usuario administrador por defecto (admin@tiendago.com / Admin123*)");
 
         // =============================================
         // GRUPO: /api/usuarios (Administración de Usuarios)

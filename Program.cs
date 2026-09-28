@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. REGISTRO DE CONEXIÓN POSTGRESQL (EF CORE)
 // =============================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=aws-0-us-west-2.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.ywxnbqblfazplkggkcgw;Password=TiendaGo123;SSL Mode=Require;Trust Server Certificate=true";
+    ?? "Host=aws-0-us-west-2.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.ywxnbqblfazplkggkcgw;Password=TiendaGo123;SSL Mode=Require;Trust Server Certificate=true";
 
 builder.Services.AddDbContext<TiendaGoDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -152,10 +152,78 @@ app.UseAuthorization();
 // =============================================
 // 8. MAPEO DE GRUPOS DE ENDPOINTS
 // =============================================
+// Endpoint liviano de comprobación y conectividad (Healthcheck / Ping)
+app.MapGet("/api/ping", () => Results.Ok(new { estado = "Conectado", fecha = DateTime.UtcNow }))
+   .AllowAnonymous()
+   .WithTags("Health")
+   .WithSummary("Comprueba la conectividad de la API desde clientes móviles y web");
+
+app.MapGet("/api/health", () => Results.Ok(new { estado = "Conectado", fecha = DateTime.UtcNow }))
+   .AllowAnonymous()
+   .WithTags("Health")
+   .WithSummary("Healthcheck endpoint");
+
 app.MapUsuarioEndpoints();
 app.MapProductoEndpoints();
 app.MapTurnoCajaEndpoints();
 app.MapVentaEndpoints();
 app.MapDashboardEndpoints();
+
+// =============================================
+// 9. SEMBRADO AUTOMÁTICO DE DATOS BASE (ADMIN)
+// =============================================
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<TiendaGoDbContext>();
+
+        // Verificar o insertar roles base
+        if (!context.Roles.Any())
+        {
+            context.Roles.AddRange(
+                new Roles { IdRol = 1, NombreRol = "Administrador", Descripcion = "Acceso total al sistema y configuraciones" },
+                new Roles { IdRol = 2, NombreRol = "Cajero", Descripcion = "Operaciones de venta y terminal POS" },
+                new Roles { IdRol = 3, NombreRol = "Supervisor", Descripcion = "Arqueos de caja y supervisión" }
+            );
+            context.SaveChanges();
+        }
+
+        var adminRol = context.Roles.FirstOrDefault(r => r.NombreRol == "Administrador") ?? context.Roles.First();
+
+        var adminUser = context.Usuarios.FirstOrDefault(u => u.CorreoElectronico.ToLower() == "admin@tiendago.com");
+        var hash = BCrypt.Net.BCrypt.HashPassword("Admin123*");
+
+        if (adminUser == null)
+        {
+            context.Usuarios.Add(new Usuarios
+            {
+                IdUsuario = Guid.NewGuid(),
+                IdRol = adminRol.IdRol,
+                NombreCompleto = "Administrador TiendaGo",
+                CorreoElectronico = "admin@tiendago.com",
+                ClaveHash = hash,
+                EstadoActivo = true,
+                FechaRegistro = DateTime.UtcNow
+            });
+            context.SaveChanges();
+            Console.WriteLine("[SEED] Usuario administrador (admin@tiendago.com) creado exitosamente en Supabase.");
+        }
+        else
+        {
+            // Asegurar que tenga la contraseña y rol actualizados
+            adminUser.ClaveHash = hash;
+            adminUser.IdRol = adminRol.IdRol;
+            adminUser.EstadoActivo = true;
+            context.SaveChanges();
+            Console.WriteLine("[SEED] Usuario administrador (admin@tiendago.com) verificado y actualizado en Supabase.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED WARNING] Error durante el sembrado automático: {ex.Message}");
+    }
+}
 
 app.Run();

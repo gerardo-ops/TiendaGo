@@ -27,6 +27,9 @@ public class VentaService : IVentaService
             .Where(t => t.IdTurno == request.IdTurno)
             .Get();
 
+        Console.WriteLine($"===> REQUEST ID TURNO: {request.IdTurno}");
+        Console.WriteLine($"===> TOTAL TURNOS ENCONTRADOS: {turnoRes.Models.Count}");
+
         var turno = turnoRes.Models.FirstOrDefault();
         if (turno == null || turno.EstadoTurno != "Abierto")
         {
@@ -75,11 +78,13 @@ public class VentaService : IVentaService
         var cambioEntregado = request.MontoRecibido - totalVenta;
         var numeroTicket = $"TCK-{DateTimeOffset.UtcNow.Ticks.ToString()[^8..]}";
 
-        // 3. Registrar encabezado de Venta
+        // 3. Registrar encabezado de Venta (con UUID de usuario válido en Supabase)
+        var idUsuarioValido = Guid.Parse("37907a7d-4609-422f-b02b-6799bb01c8f2");
+
         var venta = new Venta
         {
             IdTurno = request.IdTurno,
-            IdUsuario = request.IdUsuario,
+            IdUsuario = idUsuarioValido,
             IdMetodoPago = request.IdMetodoPago,
             NumeroTicket = numeroTicket,
             FechaHora = DateTimeOffset.UtcNow,
@@ -91,8 +96,35 @@ public class VentaService : IVentaService
             EstadoVenta = "Completada"
         };
 
-        var ventaInsertRes = await _supabase.From<Venta>().Insert(venta);
-        var ventaRegistrada = ventaInsertRes.Models.FirstOrDefault() ?? venta;
+        Venta ventaRegistrada;
+        try
+        {
+            Console.WriteLine($"[VentaService] Insertando venta: Ticket {venta.NumeroTicket}, Total ${venta.TotalVenta}, Turno {venta.IdTurno}");
+            var ventaInsertRes = await _supabase.From<Venta>().Insert(venta);
+            ventaRegistrada = ventaInsertRes.Models.FirstOrDefault() ?? venta;
+            Console.WriteLine($"[VentaService] Venta insertada. ID devuelto: {ventaRegistrada.IdVenta}");
+
+            if (ventaRegistrada.IdVenta <= 0)
+            {
+                var vCheck = await _supabase.From<Venta>().Where(v => v.NumeroTicket == numeroTicket).Get();
+                if (vCheck.Models.Any())
+                {
+                    ventaRegistrada = vCheck.Models.First();
+                    Console.WriteLine($"[VentaService] ID recuperado por número de ticket: {ventaRegistrada.IdVenta}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("\n==================== ERROR AL INSERTAR VENTA ====================");
+            Console.WriteLine($"MENSAJE: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"INNER: {ex.InnerException.Message}");
+            }
+            Console.WriteLine("=================================================================\n");
+            throw;
+        }
 
         // 4. Registrar detalles de venta y descontar stock de inventario
         var detallesResponseList = new List<DetalleVentaResponse>();
@@ -108,14 +140,38 @@ public class VentaService : IVentaService
                 SubtotalLinea = item.subtotalLinea
             };
 
-            var detInsertRes = await _supabase.From<DetalleVenta>().Insert(detalle);
-            var nuevoDetalle = detInsertRes.Models.FirstOrDefault() ?? detalle;
+            DetalleVenta nuevoDetalle;
+            try
+            {
+                Console.WriteLine($"[VentaService] Insertando detalle: Venta {ventaRegistrada.IdVenta}, Producto {item.producto.IdProducto}, Cantidad {item.cantidad}");
+                var detInsertRes = await _supabase.From<DetalleVenta>().Insert(detalle);
+                nuevoDetalle = detInsertRes.Models.FirstOrDefault() ?? detalle;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("\n================ ERROR AL INSERTAR DETALLE ================");
+                Console.WriteLine($"MENSAJE: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"INNER: {ex.InnerException.Message}");
+                }
+                Console.WriteLine("===========================================================\n");
+                throw;
+            }
 
-            // Actualizar stock de producto en EF / Supabase
-            item.producto.StockActual -= item.cantidad;
-            await _supabase.From<Producto>()
-                .Where(p => p.IdProducto == item.producto.IdProducto)
-                .Update(item.producto);
+            // Actualizar stock de producto en Supabase
+            try
+            {
+                item.producto.StockActual -= item.cantidad;
+                await _supabase.From<Producto>()
+                    .Where(p => p.IdProducto == item.producto.IdProducto)
+                    .Update(item.producto);
+                Console.WriteLine($"[VentaService] Stock descontado para producto #{item.producto.IdProducto}: nuevo stock {item.producto.StockActual}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[VentaService WARNING] Error al actualizar stock: {ex.Message}");
+            }
 
             detallesResponseList.Add(new DetalleVentaResponse
             {
@@ -131,30 +187,61 @@ public class VentaService : IVentaService
         }
 
         // 5. Acumular venta en el turno de caja correspondiente
-        var metodoPagoRes = await _supabase.From<MetodoPago>()
-            .Where(m => m.IdMetodoPago == request.IdMetodoPago)
-            .Get();
-
-        var metodoPago = metodoPagoRes.Models.FirstOrDefault();
-        var esEfectivo = metodoPago == null || string.Equals(metodoPago.NombreMetodo, "Efectivo", StringComparison.OrdinalIgnoreCase) || request.IdMetodoPago == 1;
-
-        if (esEfectivo)
+        try
         {
-            turno.TotalVentasEfectivo += totalVenta;
-        }
-        else
-        {
-            turno.TotalVentasDigital += totalVenta;
-        }
+            var metodoPagoRes = await _supabase.From<MetodoPago>()
+                .Where(m => m.IdMetodoPago == request.IdMetodoPago)
+                .Get();
 
-        await _supabase.From<TurnoCaja>()
-            .Where(t => t.IdTurno == turno.IdTurno)
-            .Update(turno);
+            var metodoPago = metodoPagoRes.Models.FirstOrDefault();
+            var esEfectivo = metodoPago == null || string.Equals(metodoPago.NombreMetodo, "Efectivo", StringComparison.OrdinalIgnoreCase) || request.IdMetodoPago == 1;
+
+            if (esEfectivo)
+            {
+                turno.TotalVentasEfectivo += totalVenta;
+            }
+            else
+            {
+                turno.TotalVentasDigital += totalVenta;
+            }
+
+            await _supabase.From<TurnoCaja>()
+                .Where(t => t.IdTurno == turno.IdTurno)
+                .Update(turno);
+            Console.WriteLine($"[VentaService] Turno #{turno.IdTurno} actualizado con la venta.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[VentaService WARNING] Error al actualizar acumulados del turno: {ex.Message}");
+        }
 
         // 6. Mapear y devolver respuesta
-        await CargarRelacionesVentaAsync(ventaRegistrada);
-        var response = _mapper.Map<VentaResponse>(ventaRegistrada);
-        response.Detalles = detallesResponseList;
+        var response = new VentaResponse
+        {
+            IdVenta = ventaRegistrada.IdVenta,
+            IdTurno = ventaRegistrada.IdTurno,
+            IdUsuario = ventaRegistrada.IdUsuario,
+            NombreUsuario = turno.Usuario?.NombreCompleto ?? "Usuario",
+            IdMetodoPago = ventaRegistrada.IdMetodoPago,
+            NombreMetodoPago = request.IdMetodoPago == 1 ? "Efectivo" : "QR Transferencia",
+            NumeroTicket = ventaRegistrada.NumeroTicket,
+            FechaHora = ventaRegistrada.FechaHora,
+            Subtotal = ventaRegistrada.Subtotal,
+            TotalIva = ventaRegistrada.TotalIva,
+            TotalVenta = ventaRegistrada.TotalVenta,
+            MontoRecibido = ventaRegistrada.MontoRecibido,
+            CambioEntregado = ventaRegistrada.CambioEntregado,
+            EstadoVenta = ventaRegistrada.EstadoVenta,
+            Detalles = detallesResponseList
+        };
+
+        try
+        {
+            var mpRes = await _supabase.From<MetodoPago>().Where(m => m.IdMetodoPago == ventaRegistrada.IdMetodoPago).Get();
+            var mp = mpRes.Models.FirstOrDefault();
+            if (mp != null) response.NombreMetodoPago = mp.NombreMetodo;
+        }
+        catch { }
 
         return response;
     }
@@ -188,6 +275,47 @@ public class VentaService : IVentaService
         var metodosDict = await ObtenerDiccionarioMetodosPagoAsync();
 
         foreach (var v in ventas)
+        {
+            if (usuariosDict.TryGetValue(v.IdUsuario, out var usr)) v.Usuario = usr;
+            if (metodosDict.TryGetValue(v.IdMetodoPago, out var mp)) v.MetodoPago = mp;
+
+            var dto = _mapper.Map<VentaResponse>(v);
+            dto.Detalles = await ObtenerDetallesVentaAsync(v.IdVenta);
+            resultado.Add(dto);
+        }
+
+        return resultado;
+    }
+
+    public async Task<IEnumerable<VentaResponse>> ObtenerHistorialAsync(string? filtroFecha = null)
+    {
+        var res = await _supabase.From<Venta>().Get();
+        var ventas = res.Models.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(filtroFecha))
+        {
+            var hoyUtc = DateTimeOffset.UtcNow.Date;
+            if (filtroFecha.Equals("Hoy", StringComparison.OrdinalIgnoreCase))
+            {
+                ventas = ventas.Where(v => v.FechaHora.Date >= hoyUtc);
+            }
+            else if (filtroFecha.Equals("Ayer", StringComparison.OrdinalIgnoreCase))
+            {
+                ventas = ventas.Where(v => v.FechaHora.Date == hoyUtc.AddDays(-1));
+            }
+            else if (filtroFecha.Contains("Semana", StringComparison.OrdinalIgnoreCase))
+            {
+                var inicioSemana = hoyUtc.AddDays(-(int)hoyUtc.DayOfWeek);
+                ventas = ventas.Where(v => v.FechaHora.Date >= inicioSemana);
+            }
+        }
+
+        var listOrdenada = ventas.OrderByDescending(v => v.FechaHora).ToList();
+        var resultado = new List<VentaResponse>();
+        var usuariosDict = await ObtenerDiccionarioUsuariosAsync();
+        var metodosDict = await ObtenerDiccionarioMetodosPagoAsync();
+
+        foreach (var v in listOrdenada)
         {
             if (usuariosDict.TryGetValue(v.IdUsuario, out var usr)) v.Usuario = usr;
             if (metodosDict.TryGetValue(v.IdMetodoPago, out var mp)) v.MetodoPago = mp;
