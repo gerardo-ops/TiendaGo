@@ -1,16 +1,20 @@
+using System;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
 namespace TiendaGo.Models;
 
+/// <summary>
+/// Modelo Postgrest / Supabase C# Client para la tabla 'usuarios'
+/// </summary>
 [Table("usuarios")]
 public class Usuario : BaseModel
 {
     [PrimaryKey("id_usuario", false)]
-    public Guid IdUsuario { get; set; }
+    public Guid IdUsuario { get; set; } = Guid.NewGuid();
 
     [Column("id_rol")]
-    public long IdRol { get; set; }
+    public long IdRol { get; set; } = 2; // Default 2: Cajero
 
     [Reference(typeof(Rol))]
     public Rol? Rol { get; set; }

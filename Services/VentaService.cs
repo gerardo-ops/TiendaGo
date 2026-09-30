@@ -225,7 +225,7 @@ public class VentaService : IVentaService
             IdMetodoPago = ventaRegistrada.IdMetodoPago,
             NombreMetodoPago = request.IdMetodoPago == 1 ? "Efectivo" : "QR Transferencia",
             NumeroTicket = ventaRegistrada.NumeroTicket,
-            FechaHora = ventaRegistrada.FechaHora,
+            FechaHora = TimeZoneHelper.ToBusinessTime(ventaRegistrada.FechaHora),
             Subtotal = ventaRegistrada.Subtotal,
             TotalIva = ventaRegistrada.TotalIva,
             TotalVenta = ventaRegistrada.TotalVenta,
@@ -257,6 +257,7 @@ public class VentaService : IVentaService
 
         await CargarRelacionesVentaAsync(venta);
         var response = _mapper.Map<VentaResponse>(venta);
+        response.FechaHora = TimeZoneHelper.ToBusinessTime(venta.FechaHora);
         response.Detalles = await ObtenerDetallesVentaAsync(idVenta);
 
         return response;
@@ -280,6 +281,7 @@ public class VentaService : IVentaService
             if (metodosDict.TryGetValue(v.IdMetodoPago, out var mp)) v.MetodoPago = mp;
 
             var dto = _mapper.Map<VentaResponse>(v);
+            dto.FechaHora = TimeZoneHelper.ToBusinessTime(v.FechaHora);
             dto.Detalles = await ObtenerDetallesVentaAsync(v.IdVenta);
             resultado.Add(dto);
         }
@@ -294,19 +296,27 @@ public class VentaService : IVentaService
 
         if (!string.IsNullOrWhiteSpace(filtroFecha))
         {
-            var hoyUtc = DateTimeOffset.UtcNow.Date;
+            var hoyLocal = TimeZoneHelper.GetBusinessToday();
+
             if (filtroFecha.Equals("Hoy", StringComparison.OrdinalIgnoreCase))
             {
-                ventas = ventas.Where(v => v.FechaHora.Date >= hoyUtc);
+                ventas = ventas.Where(v => TimeZoneHelper.ToBusinessDate(v.FechaHora) == hoyLocal);
             }
             else if (filtroFecha.Equals("Ayer", StringComparison.OrdinalIgnoreCase))
             {
-                ventas = ventas.Where(v => v.FechaHora.Date == hoyUtc.AddDays(-1));
+                var ayerLocal = hoyLocal.AddDays(-1);
+                ventas = ventas.Where(v => TimeZoneHelper.ToBusinessDate(v.FechaHora) == ayerLocal);
             }
             else if (filtroFecha.Contains("Semana", StringComparison.OrdinalIgnoreCase))
             {
-                var inicioSemana = hoyUtc.AddDays(-(int)hoyUtc.DayOfWeek);
-                ventas = ventas.Where(v => v.FechaHora.Date >= inicioSemana);
+                // Inicio de semana local (Lunes 00:00:00)
+                var diasDesdeLunes = ((int)hoyLocal.DayOfWeek + 6) % 7;
+                var inicioSemanaLocal = hoyLocal.AddDays(-diasDesdeLunes);
+                ventas = ventas.Where(v =>
+                {
+                    var fechaVenta = TimeZoneHelper.ToBusinessDate(v.FechaHora);
+                    return fechaVenta >= inicioSemanaLocal && fechaVenta <= hoyLocal;
+                });
             }
         }
 
@@ -321,6 +331,7 @@ public class VentaService : IVentaService
             if (metodosDict.TryGetValue(v.IdMetodoPago, out var mp)) v.MetodoPago = mp;
 
             var dto = _mapper.Map<VentaResponse>(v);
+            dto.FechaHora = TimeZoneHelper.ToBusinessTime(v.FechaHora);
             dto.Detalles = await ObtenerDetallesVentaAsync(v.IdVenta);
             resultado.Add(dto);
         }

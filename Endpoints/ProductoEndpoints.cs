@@ -144,18 +144,25 @@ public static class ProductoEndpoints
         .WithName("ActualizarProducto")
         .WithSummary("Actualiza los datos, existencias o precios de un producto");
 
-        // Eliminar producto (baja lógica)
+        // Eliminar producto (baja lógica o física según historial)
         productosGroup.MapDelete("/{id:int}", async (
             int id,
             [FromServices] IProductoService productoService) =>
         {
-            var eliminado = await productoService.EliminarAsync(id);
-            return eliminado
-                ? Results.NoContent()
-                : Results.NotFound(new { mensaje = $"Producto con ID {id} no encontrado." });
+            try
+            {
+                var eliminado = await productoService.EliminarAsync(id);
+                return eliminado
+                    ? Results.NoContent()
+                    : Results.NotFound(new { mensaje = $"Producto con ID {id} no encontrado." });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status500InternalServerError);
+            }
         })
         .RequireAuthorization()
         .WithName("EliminarProducto")
-        .WithSummary("Desactiva o da de baja un producto del catálogo");
+        .WithSummary("Desactiva o elimina un producto del catálogo según historial de ventas");
     }
 }

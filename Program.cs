@@ -146,6 +146,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -164,6 +165,7 @@ app.MapGet("/api/health", () => Results.Ok(new { estado = "Conectado", fecha = D
    .WithSummary("Healthcheck endpoint");
 
 app.MapUsuarioEndpoints();
+app.MapCategoriaEndpoints();
 app.MapProductoEndpoints();
 app.MapTurnoCajaEndpoints();
 app.MapVentaEndpoints();

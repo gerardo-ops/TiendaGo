@@ -20,6 +20,7 @@ public class ProductoService : IProductoService
     {
         var query = _context.Productos
             .Include(p => p.IdCategoriaNavigation)
+            .Where(p => p.EstadoActivo)
             .AsNoTracking()
             .AsQueryable();
 
@@ -111,7 +112,7 @@ public class ProductoService : IProductoService
             PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : request.Precio,
             StockActual = request.StockActual > 0 ? request.StockActual : request.Stock,
             StockMinimo = request.StockMinimo,
-            UrlImagen = request.UrlImagen,
+            UrlImagen = NormalizarYGuardarImagen(request.UrlImagen, sku),
             EstadoActivo = request.EstadoActivo,
             FechaCreacion = DateTime.UtcNow
         };
@@ -166,7 +167,10 @@ public class ProductoService : IProductoService
         producto.PrecioVenta = request.PrecioVenta > 0 ? request.PrecioVenta : request.Precio;
         producto.StockActual = request.StockActual >= 0 ? request.StockActual : request.Stock;
         producto.StockMinimo = request.StockMinimo;
-        producto.UrlImagen = request.UrlImagen;
+        if (!string.IsNullOrWhiteSpace(request.UrlImagen))
+        {
+            producto.UrlImagen = NormalizarYGuardarImagen(request.UrlImagen, sku);
+        }
         producto.EstadoActivo = request.EstadoActivo;
 
         await _context.SaveChangesAsync();
@@ -181,10 +185,75 @@ public class ProductoService : IProductoService
         var producto = await _context.Productos.FindAsync(id);
         if (producto == null) return false;
 
-        // Baja lógica
-        producto.EstadoActivo = false;
-        await _context.SaveChangesAsync();
+        // Comprobar si el producto ya tiene ventas registradas en el historial (DetallesVenta)
+        var tieneVentas = await _context.DetallesVenta.AnyAsync(dv => dv.IdProducto == id);
+
+        if (tieneVentas)
+        {
+            // Borrado lógico: Cambiar bandera a inactivo para no violar la FK del historial de ventas
+            producto.EstadoActivo = false;
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // Borrado físico real si nunca ha tenido ventas asociadas
+            try
+            {
+                _context.Productos.Remove(producto);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Fallback seguro a borrado lógico ante cualquier otra restricción de FK
+                _context.Entry(producto).State = EntityState.Unchanged;
+                producto.EstadoActivo = false;
+                await _context.SaveChangesAsync();
+            }
+        }
 
         return true;
+    }
+
+    private static string? NormalizarYGuardarImagen(string? imagenRaw, string sku)
+    {
+        if (string.IsNullOrWhiteSpace(imagenRaw)) return null;
+
+        // Si ya es una URL HTTP o relativa estándar (/uploads/...) y tiene longitud prudente
+        if (imagenRaw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            imagenRaw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            imagenRaw.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return imagenRaw.Length <= 300 ? imagenRaw : imagenRaw.Substring(0, 300);
+        }
+
+        // Si viene en Base64 (con o sin prefijo data:image/...)
+        try
+        {
+            var base64Data = imagenRaw;
+            if (base64Data.Contains(","))
+            {
+                base64Data = base64Data.Substring(base64Data.IndexOf(",") + 1);
+            }
+
+            var bytes = Convert.FromBase64String(base64Data.Trim());
+            var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "productos");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var safeSku = string.Concat(sku.Where(char.IsLetterOrDigit));
+            if (string.IsNullOrEmpty(safeSku)) safeSku = "prod";
+            var fileName = $"{safeSku}_{Guid.NewGuid():N}.jpg";
+            var filePath = Path.Combine(uploadsDir, fileName);
+
+            File.WriteAllBytes(filePath, bytes);
+            return $"/uploads/productos/{fileName}";
+        }
+        catch
+        {
+            // Si no era Base64 válido pero es un string corto, guardarlo directamente
+            return imagenRaw.Length <= 300 ? imagenRaw : null;
+        }
     }
 }

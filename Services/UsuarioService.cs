@@ -114,7 +114,7 @@ public class UsuarioService : IUsuarioService
 
         string claveHash = BCrypt.Net.BCrypt.HashPassword(password);
 
-        var nuevoUsuario = new Usuarios
+        var nuevoCajero = new Usuarios
         {
             IdUsuario = Guid.NewGuid(),
             IdRol = idRol,
@@ -125,12 +125,21 @@ public class UsuarioService : IUsuarioService
             FechaRegistro = DateTime.UtcNow
         };
 
-        _context.Usuarios.Add(nuevoUsuario);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.Usuarios.Add(nuevoCajero);
+            await _context.SaveChangesAsync();
 
-        await _context.Entry(nuevoUsuario).Reference(u => u.IdRolNavigation).LoadAsync();
+            // Cargar datos del rol para el DTO de respuesta
+            await _context.Entry(nuevoCajero).Reference(u => u.IdRolNavigation).LoadAsync();
 
-        return _mapper.Map<UsuarioResponse>(nuevoUsuario);
+            return _mapper.Map<UsuarioResponse>(nuevoCajero);
+        }
+        catch (DbUpdateException ex)
+        {
+            var innerMsg = ex.InnerException?.Message ?? ex.Message;
+            throw new DbUpdateException($"Error BD: {innerMsg}", ex);
+        }
     }
 
     public async Task<UsuarioResponse> CrearUsuarioAsync(CrearUsuarioRequest request)

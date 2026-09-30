@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TiendaGo.DTOs.Productos;
 
 public class ProductoRequest
@@ -44,7 +46,22 @@ public class ProductoRequest
 
     public int StockMinimo { get; set; } = 5;
 
+    [JsonPropertyName("urlImagen")]
     public string? UrlImagen { get; set; }
+
+    [JsonPropertyName("imagenUrl")]
+    public string? ImagenUrl
+    {
+        get => UrlImagen;
+        set => UrlImagen = value ?? UrlImagen;
+    }
+
+    [JsonPropertyName("imagenBase64")]
+    public string? ImagenBase64
+    {
+        get => UrlImagen;
+        set => UrlImagen = value ?? UrlImagen;
+    }
 
     public bool EstadoActivo
     {

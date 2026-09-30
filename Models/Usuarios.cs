@@ -1,27 +1,58 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TiendaGo.Models;
 
+/// <summary>
+/// Mapeo de la tabla 'public.usuarios' en PostgreSQL / Supabase
+/// </summary>
+[Table("usuarios", Schema = "public")]
 public partial class Usuarios
 {
-    public Guid IdUsuario { get; set; }
+    [Key]
+    [Column("id_usuario")]
+    public Guid IdUsuario { get; set; } = Guid.NewGuid();
 
-    public long IdRol { get; set; }
+    /// <summary>
+    /// Relación con la tabla 'roles' (1: Administrador, 2: Cajero, 3: Supervisor)
+    /// </summary>
+    [Required]
+    [Column("id_rol")]
+    public long IdRol { get; set; } = 2; // Por defecto: 2 (Cajero)
 
-    public string NombreCompleto { get; set; } = null!;
+    [Required]
+    [MaxLength(150)]
+    [Column("nombre_completo")]
+    public string NombreCompleto { get; set; } = string.Empty;
 
-    public string CorreoElectronico { get; set; } = null!;
+    [Required]
+    [MaxLength(150)]
+    [EmailAddress]
+    [Column("correo_electronico")]
+    public string CorreoElectronico { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Contraseña cifrada con algoritmo BCrypt
+    /// </summary>
+    [MaxLength(255)]
+    [Column("clave_hash")]
     public string? ClaveHash { get; set; }
 
-    public bool EstadoActivo { get; set; }
+    [Required]
+    [Column("estado_activo")]
+    public bool EstadoActivo { get; set; } = true;
 
-    public DateTime FechaRegistro { get; set; }
+    [Required]
+    [Column("fecha_registro")]
+    public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 
-    public virtual Roles IdRolNavigation { get; set; } = null!;
+    [ForeignKey("IdRol")]
+    public virtual Roles? IdRolNavigation { get; set; }
 
-    public virtual Users IdUsuarioNavigation { get; set; } = null!;
+    [ForeignKey("IdUsuario")]
+    public virtual Users? IdUsuarioNavigation { get; set; }
 
     public virtual ICollection<TurnosCaja> TurnosCaja { get; set; } = new List<TurnosCaja>();
 

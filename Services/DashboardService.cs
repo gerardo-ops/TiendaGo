@@ -18,15 +18,15 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardResumenResponse> ObtenerResumenAsync()
     {
-        var hoyUtc = DateTimeOffset.UtcNow.Date;
+        var hoyLocal = TimeZoneHelper.GetBusinessToday();
 
-        // 1. Obtener ventas del día de hoy
+        // 1. Obtener ventas del día de hoy en hora local
         var ventasRes = await _supabase.From<Venta>()
             .Where(v => v.EstadoVenta == "Completada")
             .Get();
 
         var ventasHoy = ventasRes.Models
-            .Where(v => v.FechaHora.Date >= hoyUtc)
+            .Where(v => TimeZoneHelper.ToBusinessDate(v.FechaHora) == hoyLocal)
             .ToList();
 
         decimal totalVentasDia = ventasHoy.Sum(v => v.TotalVenta);

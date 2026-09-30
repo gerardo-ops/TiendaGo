@@ -166,13 +166,63 @@ public static class UsuarioEndpoints
                 var nuevoUsuario = await usuarioService.RegistrarUsuarioAsync(request);
                 return Results.Created($"/api/usuarios/{nuevoUsuario.IdUsuario}", nuevoUsuario);
             }
+            catch (DbUpdateException ex)
+            {
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                return Results.BadRequest(new { mensaje = $"Error BD: {innerMsg}" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Conflict(new { mensaje = ex.Message });
+            }
             catch (Exception ex)
             {
-                return Results.BadRequest(new { mensaje = ex.Message });
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                return Results.BadRequest(new { mensaje = $"Error BD: {innerMsg}" });
             }
         })
         .WithName("CrearUsuario")
         .WithSummary("Crea un nuevo usuario en el sistema");
+
+        usuariosGroup.MapPost("/cajero", async (
+            [FromBody] CrearUsuarioRequest request,
+            [FromServices] IUsuarioService usuarioService) =>
+        {
+            var correo = (request.Correo ?? request.CorreoElectronico ?? string.Empty).Trim();
+            var nombre = (request.Nombre ?? request.NombreCompleto ?? string.Empty).Trim();
+            var password = request.Password ?? request.Clave ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(correo) ||
+                string.IsNullOrWhiteSpace(password) ||
+                string.IsNullOrWhiteSpace(nombre))
+            {
+                return Results.BadRequest(new { mensaje = "Nombre completo, correo/usuario y contraseña son requeridos para dar de alta al cajero." });
+            }
+
+            request.IdRol = 2; // Forzar rol Cajero (2)
+
+            try
+            {
+                var nuevoCajero = await usuarioService.RegistrarUsuarioAsync(request);
+                return Results.Created($"/api/usuarios/{nuevoCajero.IdUsuario}", nuevoCajero);
+            }
+            catch (DbUpdateException ex)
+            {
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                return Results.BadRequest(new { mensaje = $"Error BD: {innerMsg}" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Conflict(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                return Results.BadRequest(new { mensaje = $"Error BD: {innerMsg}" });
+            }
+        })
+        .WithName("RegistrarCajero")
+        .WithSummary("Registra un nuevo usuario con rol Cajero en el sistema");
 
         usuariosGroup.MapPatch("/{id:guid}/estado", async (
             Guid id,
