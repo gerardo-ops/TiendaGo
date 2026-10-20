@@ -25,4 +25,11 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.6.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="TiendaGo.UnitTests\**" />
+    <Content Remove="TiendaGo.UnitTests\**" />
+    <EmbeddedResource Remove="TiendaGo.UnitTests\**" />
+    <None Remove="TiendaGo.UnitTests\**" />
+  </ItemGroup>
+
 </Project>

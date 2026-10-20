@@ -82,6 +82,7 @@ builder.Services.AddAutoMapper(cfg =>
 });
 
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<ITurnoCajaService, TurnoCajaService>();
 builder.Services.AddScoped<IVentaService, VentaService>();

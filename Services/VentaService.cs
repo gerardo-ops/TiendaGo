@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using TiendaGo.DTOs.Ventas;
 using TiendaGo.Models;
 
@@ -6,13 +7,28 @@ namespace TiendaGo.Services;
 
 public class VentaService : IVentaService
 {
-    private readonly Supabase.Client _supabase;
+    private readonly TiendaGoDbContext? _context;
+    private readonly Supabase.Client? _supabase;
     private readonly IMapper _mapper;
+
+    public VentaService(TiendaGoDbContext context, IMapper mapper)
+    {
+        _context = context;
+        _mapper = mapper;
+    }
 
     public VentaService(Supabase.Client supabase, IMapper mapper)
     {
         _supabase = supabase;
         _mapper = mapper;
+    }
+
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public VentaService(TiendaGoDbContext context, IMapper mapper, Supabase.Client? supabase = null)
+    {
+        _context = context;
+        _mapper = mapper;
+        _supabase = supabase;
     }
 
     public async Task<VentaResponse> RegistrarVentaAsync(VentaRequest request)
@@ -22,23 +38,163 @@ public class VentaService : IVentaService
             throw new ArgumentException("La venta debe contener al menos un producto.");
         }
 
-        // 1. Validar que el turno de caja esté abierto
+        if (_context != null)
+        {
+            // 1. Validar que el turno de caja esté abierto
+            var turno = await _context.TurnosCaja
+                .Include(t => t.IdUsuarioNavigation)
+                .FirstOrDefaultAsync(t => t.IdTurno == request.IdTurno);
+
+            if (turno == null || turno.EstadoTurno != "Abierto")
+            {
+                throw new InvalidOperationException($"El turno #{request.IdTurno} no existe o no se encuentra Abierto para procesar ventas.");
+            }
+
+            // 2. Validar existencias de productos y calcular importes
+            decimal totalVenta = 0m;
+            var listaDetallesProcesados = new List<(Productos producto, int cantidad, decimal precioUnitario, decimal subtotalLinea)>();
+
+            foreach (var d in request.Detalles)
+            {
+                if (d.Cantidad <= 0)
+                {
+                    throw new ArgumentException($"La cantidad para el producto ID {d.IdProducto} debe ser mayor a 0.");
+                }
+
+                var producto = await _context.Productos.FirstOrDefaultAsync(p => p.IdProducto == d.IdProducto);
+                if (producto == null || !producto.EstadoActivo)
+                {
+                    throw new InvalidOperationException($"El producto ID {d.IdProducto} no existe o está inactivo.");
+                }
+
+                if (producto.StockActual < d.Cantidad)
+                {
+                    throw new InvalidOperationException($"Stock insuficiente para '{producto.NombreProducto}'. Disponible: {producto.StockActual}, Solicitado: {d.Cantidad}.");
+                }
+
+                var precioUnitario = d.PrecioUnitarioHistorico ?? producto.PrecioVenta;
+                var subtotalLinea = precioUnitario * d.Cantidad;
+                totalVenta += subtotalLinea;
+
+                listaDetallesProcesados.Add((producto, d.Cantidad, precioUnitario, subtotalLinea));
+            }
+
+            if (request.MontoRecibido < totalVenta)
+            {
+                throw new InvalidOperationException($"El monto recibido (${request.MontoRecibido:F2}) es menor al total de la venta (${totalVenta:F2}).");
+            }
+
+            var totalIva = Math.Round(totalVenta - (totalVenta / 1.13m), 2);
+            var subtotalSinIva = totalVenta - totalIva;
+            var cambioEntregado = request.MontoRecibido - totalVenta;
+            var numeroTicket = $"TCK-{DateTimeOffset.UtcNow.Ticks.ToString()[^8..]}";
+
+            // 3. Registrar encabezado de Venta
+            var idUsuarioValido = request.IdUsuario != Guid.Empty ? request.IdUsuario : turno.IdUsuario;
+
+            var venta = new Ventas
+            {
+                IdTurno = request.IdTurno,
+                IdUsuario = idUsuarioValido,
+                IdMetodoPago = request.IdMetodoPago,
+                NumeroTicket = numeroTicket,
+                FechaHora = DateTime.UtcNow,
+                Subtotal = subtotalSinIva,
+                TotalIva = totalIva,
+                TotalVenta = totalVenta,
+                MontoRecibido = request.MontoRecibido,
+                CambioEntregado = cambioEntregado,
+                EstadoVenta = "Completada"
+            };
+
+            _context.Ventas.Add(venta);
+            await _context.SaveChangesAsync();
+
+            // 4. Registrar detalles y descontar inventario
+            var detallesResponseList = new List<DetalleVentaResponse>();
+            foreach (var item in listaDetallesProcesados)
+            {
+                var detalle = new DetallesVenta
+                {
+                    IdVenta = venta.IdVenta,
+                    IdProducto = item.producto.IdProducto,
+                    Cantidad = item.cantidad,
+                    PrecioUnitarioHistorico = item.precioUnitario,
+                    SubtotalLinea = item.subtotalLinea
+                };
+
+                _context.DetallesVenta.Add(detalle);
+                item.producto.StockActual -= item.cantidad;
+
+                detallesResponseList.Add(new DetalleVentaResponse
+                {
+                    IdDetalle = detalle.IdDetalle,
+                    IdVenta = venta.IdVenta,
+                    IdProducto = item.producto.IdProducto,
+                    NombreProducto = item.producto.NombreProducto,
+                    CodigoSku = item.producto.CodigoSku,
+                    Cantidad = item.cantidad,
+                    PrecioUnitarioHistorico = item.precioUnitario,
+                    SubtotalLinea = item.subtotalLinea
+                });
+            }
+
+            // 5. Acumular venta en el turno de caja
+            var metodoPago = await _context.MetodosPago.FirstOrDefaultAsync(m => m.IdMetodoPago == request.IdMetodoPago);
+            var esEfectivo = metodoPago == null || string.Equals(metodoPago.NombreMetodo, "Efectivo", StringComparison.OrdinalIgnoreCase) || request.IdMetodoPago == 1;
+
+            if (esEfectivo)
+            {
+                turno.TotalVentasEfectivo += totalVenta;
+            }
+            else
+            {
+                turno.TotalVentasDigital += totalVenta;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == idUsuarioValido);
+
+            return new VentaResponse
+            {
+                IdVenta = venta.IdVenta,
+                IdTurno = venta.IdTurno,
+                IdUsuario = venta.IdUsuario,
+                NombreUsuario = usuario?.NombreCompleto ?? turno.IdUsuarioNavigation?.NombreCompleto ?? "Usuario",
+                IdMetodoPago = venta.IdMetodoPago,
+                NombreMetodoPago = metodoPago?.NombreMetodo ?? (request.IdMetodoPago == 1 ? "Efectivo" : "Digital"),
+                NumeroTicket = venta.NumeroTicket,
+                FechaHora = DateTimeOffset.UtcNow,
+                Subtotal = venta.Subtotal,
+                TotalIva = venta.TotalIva,
+                TotalVenta = venta.TotalVenta,
+                MontoRecibido = venta.MontoRecibido,
+                CambioEntregado = venta.CambioEntregado,
+                EstadoVenta = venta.EstadoVenta,
+                Detalles = detallesResponseList
+            };
+        }
+
+        if (_supabase == null)
+        {
+            throw new InvalidOperationException("No se ha configurado un proveedor de datos para VentaService.");
+        }
+
+        // 1. Validar que el turno de caja esté abierto (Supabase)
         var turnoRes = await _supabase.From<TurnoCaja>()
             .Where(t => t.IdTurno == request.IdTurno)
             .Get();
 
-        Console.WriteLine($"===> REQUEST ID TURNO: {request.IdTurno}");
-        Console.WriteLine($"===> TOTAL TURNOS ENCONTRADOS: {turnoRes.Models.Count}");
-
-        var turno = turnoRes.Models.FirstOrDefault();
-        if (turno == null || turno.EstadoTurno != "Abierto")
+        var turnoSupabase = turnoRes.Models.FirstOrDefault();
+        if (turnoSupabase == null || turnoSupabase.EstadoTurno != "Abierto")
         {
             throw new InvalidOperationException($"El turno #{request.IdTurno} no existe o no se encuentra Abierto para procesar ventas.");
         }
 
-        // 2. Validar existencias de productos y calcular importes
-        decimal subtotalVenta = 0m;
-        var listaDetallesProcesados = new List<(Producto producto, int cantidad, decimal precioUnitario, decimal subtotalLinea)>();
+        // 2. Validar existencias de productos y calcular importes (Supabase)
+        decimal totalVentaSupabase = 0m;
+        var listaDetallesProcesadosSupabase = new List<(Producto producto, int cantidad, decimal precioUnitario, decimal subtotalLinea)>();
 
         foreach (var d in request.Detalles)
         {
@@ -64,72 +220,64 @@ public class VentaService : IVentaService
 
             var precioUnitario = d.PrecioUnitarioHistorico ?? producto.PrecioVenta;
             var subtotalLinea = precioUnitario * d.Cantidad;
-            subtotalVenta += subtotalLinea;
+            totalVentaSupabase += subtotalLinea;
 
-            listaDetallesProcesados.Add((producto, d.Cantidad, precioUnitario, subtotalLinea));
+            listaDetallesProcesadosSupabase.Add((producto, d.Cantidad, precioUnitario, subtotalLinea));
         }
 
-        var totalVenta = subtotalVenta;
-        if (request.MontoRecibido < totalVenta)
+        if (request.MontoRecibido < totalVentaSupabase)
         {
-            throw new InvalidOperationException($"El monto recibido (${request.MontoRecibido:F2}) es menor al total de la venta (${totalVenta:F2}).");
+            throw new InvalidOperationException($"El monto recibido (${request.MontoRecibido:F2}) es menor al total de la venta (${totalVentaSupabase:F2}).");
         }
 
-        var cambioEntregado = request.MontoRecibido - totalVenta;
-        var numeroTicket = $"TCK-{DateTimeOffset.UtcNow.Ticks.ToString()[^8..]}";
+        var totalIvaSupabase = Math.Round(totalVentaSupabase - (totalVentaSupabase / 1.13m), 2);
+        var subtotalSinIvaSupabase = totalVentaSupabase - totalIvaSupabase;
+        var cambioEntregadoSupabase = request.MontoRecibido - totalVentaSupabase;
+        var numeroTicketSupabase = $"TCK-{DateTimeOffset.UtcNow.Ticks.ToString()[^8..]}";
 
-        // 3. Registrar encabezado de Venta (con UUID de usuario válido en Supabase)
-        var idUsuarioValido = Guid.Parse("37907a7d-4609-422f-b02b-6799bb01c8f2");
+        // 3. Registrar encabezado de Venta en Supabase
+        var idUsuarioValidoSupabase = Guid.Parse("37907a7d-4609-422f-b02b-6799bb01c8f2");
 
-        var venta = new Venta
+        var ventaSupabase = new Venta
         {
             IdTurno = request.IdTurno,
-            IdUsuario = idUsuarioValido,
+            IdUsuario = idUsuarioValidoSupabase,
             IdMetodoPago = request.IdMetodoPago,
-            NumeroTicket = numeroTicket,
+            NumeroTicket = numeroTicketSupabase,
             FechaHora = DateTimeOffset.UtcNow,
-            Subtotal = subtotalVenta,
-            TotalIva = 0m,
-            TotalVenta = totalVenta,
+            Subtotal = subtotalSinIvaSupabase,
+            TotalIva = totalIvaSupabase,
+            TotalVenta = totalVentaSupabase,
             MontoRecibido = request.MontoRecibido,
-            CambioEntregado = cambioEntregado,
+            CambioEntregado = cambioEntregadoSupabase,
             EstadoVenta = "Completada"
         };
 
         Venta ventaRegistrada;
         try
         {
-            Console.WriteLine($"[VentaService] Insertando venta: Ticket {venta.NumeroTicket}, Total ${venta.TotalVenta}, Turno {venta.IdTurno}");
-            var ventaInsertRes = await _supabase.From<Venta>().Insert(venta);
-            ventaRegistrada = ventaInsertRes.Models.FirstOrDefault() ?? venta;
-            Console.WriteLine($"[VentaService] Venta insertada. ID devuelto: {ventaRegistrada.IdVenta}");
+            var ventaInsertRes = await _supabase.From<Venta>().Insert(ventaSupabase);
+            ventaRegistrada = ventaInsertRes.Models.FirstOrDefault() ?? ventaSupabase;
 
             if (ventaRegistrada.IdVenta <= 0)
             {
-                var vCheck = await _supabase.From<Venta>().Where(v => v.NumeroTicket == numeroTicket).Get();
+                var vCheck = await _supabase.From<Venta>().Where(v => v.NumeroTicket == numeroTicketSupabase).Get();
                 if (vCheck.Models.Any())
                 {
                     ventaRegistrada = vCheck.Models.First();
-                    Console.WriteLine($"[VentaService] ID recuperado por número de ticket: {ventaRegistrada.IdVenta}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("\n==================== ERROR AL INSERTAR VENTA ====================");
-            Console.WriteLine($"MENSAJE: {ex.Message}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"INNER: {ex.InnerException.Message}");
-            }
-            Console.WriteLine("=================================================================\n");
+            Console.WriteLine($"[VentaService] ERROR AL INSERTAR VENTA: {ex.Message}");
             throw;
         }
 
         // 4. Registrar detalles de venta y descontar stock de inventario
-        var detallesResponseList = new List<DetalleVentaResponse>();
+        var detallesResponseListSupabase = new List<DetalleVentaResponse>();
 
-        foreach (var item in listaDetallesProcesados)
+        foreach (var item in listaDetallesProcesadosSupabase)
         {
             var detalle = new DetalleVenta
             {
@@ -143,37 +291,28 @@ public class VentaService : IVentaService
             DetalleVenta nuevoDetalle;
             try
             {
-                Console.WriteLine($"[VentaService] Insertando detalle: Venta {ventaRegistrada.IdVenta}, Producto {item.producto.IdProducto}, Cantidad {item.cantidad}");
                 var detInsertRes = await _supabase.From<DetalleVenta>().Insert(detalle);
                 nuevoDetalle = detInsertRes.Models.FirstOrDefault() ?? detalle;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("\n================ ERROR AL INSERTAR DETALLE ================");
-                Console.WriteLine($"MENSAJE: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"INNER: {ex.InnerException.Message}");
-                }
-                Console.WriteLine("===========================================================\n");
+                Console.WriteLine($"[VentaService] ERROR AL INSERTAR DETALLE: {ex.Message}");
                 throw;
             }
 
-            // Actualizar stock de producto en Supabase
             try
             {
                 item.producto.StockActual -= item.cantidad;
                 await _supabase.From<Producto>()
                     .Where(p => p.IdProducto == item.producto.IdProducto)
                     .Update(item.producto);
-                Console.WriteLine($"[VentaService] Stock descontado para producto #{item.producto.IdProducto}: nuevo stock {item.producto.StockActual}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[VentaService WARNING] Error al actualizar stock: {ex.Message}");
             }
 
-            detallesResponseList.Add(new DetalleVentaResponse
+            detallesResponseListSupabase.Add(new DetalleVentaResponse
             {
                 IdDetalle = nuevoDetalle.IdDetalle,
                 IdVenta = ventaRegistrada.IdVenta,
@@ -198,17 +337,16 @@ public class VentaService : IVentaService
 
             if (esEfectivo)
             {
-                turno.TotalVentasEfectivo += totalVenta;
+                turnoSupabase.TotalVentasEfectivo += totalVentaSupabase;
             }
             else
             {
-                turno.TotalVentasDigital += totalVenta;
+                turnoSupabase.TotalVentasDigital += totalVentaSupabase;
             }
 
             await _supabase.From<TurnoCaja>()
-                .Where(t => t.IdTurno == turno.IdTurno)
-                .Update(turno);
-            Console.WriteLine($"[VentaService] Turno #{turno.IdTurno} actualizado con la venta.");
+                .Where(t => t.IdTurno == turnoSupabase.IdTurno)
+                .Update(turnoSupabase);
         }
         catch (Exception ex)
         {
@@ -221,7 +359,7 @@ public class VentaService : IVentaService
             IdVenta = ventaRegistrada.IdVenta,
             IdTurno = ventaRegistrada.IdTurno,
             IdUsuario = ventaRegistrada.IdUsuario,
-            NombreUsuario = turno.Usuario?.NombreCompleto ?? "Usuario",
+            NombreUsuario = turnoSupabase.Usuario?.NombreCompleto ?? "Usuario",
             IdMetodoPago = ventaRegistrada.IdMetodoPago,
             NombreMetodoPago = request.IdMetodoPago == 1 ? "Efectivo" : "QR Transferencia",
             NumeroTicket = ventaRegistrada.NumeroTicket,
@@ -232,7 +370,7 @@ public class VentaService : IVentaService
             MontoRecibido = ventaRegistrada.MontoRecibido,
             CambioEntregado = ventaRegistrada.CambioEntregado,
             EstadoVenta = ventaRegistrada.EstadoVenta,
-            Detalles = detallesResponseList
+            Detalles = detallesResponseListSupabase
         };
 
         try
@@ -248,16 +386,59 @@ public class VentaService : IVentaService
 
     public async Task<VentaResponse?> ObtenerPorIdAsync(long idVenta)
     {
+        if (_context != null)
+        {
+            var venta = await _context.Ventas
+                .Include(v => v.DetallesVenta)
+                    .ThenInclude(d => d.IdProductoNavigation)
+                .Include(v => v.IdUsuarioNavigation)
+                .Include(v => v.IdMetodoPagoNavigation)
+                .FirstOrDefaultAsync(v => v.IdVenta == idVenta);
+
+            if (venta == null) return null;
+
+            return new VentaResponse
+            {
+                IdVenta = venta.IdVenta,
+                IdTurno = venta.IdTurno,
+                IdUsuario = venta.IdUsuario,
+                NombreUsuario = venta.IdUsuarioNavigation?.NombreCompleto ?? "Usuario",
+                IdMetodoPago = venta.IdMetodoPago,
+                NombreMetodoPago = venta.IdMetodoPagoNavigation?.NombreMetodo ?? "Efectivo",
+                NumeroTicket = venta.NumeroTicket,
+                FechaHora = TimeZoneHelper.ToBusinessTime(venta.FechaHora),
+                Subtotal = venta.Subtotal,
+                TotalIva = venta.TotalIva,
+                TotalVenta = venta.TotalVenta,
+                MontoRecibido = venta.MontoRecibido,
+                CambioEntregado = venta.CambioEntregado,
+                EstadoVenta = venta.EstadoVenta,
+                Detalles = venta.DetallesVenta.Select(d => new DetalleVentaResponse
+                {
+                    IdDetalle = d.IdDetalle,
+                    IdVenta = d.IdVenta,
+                    IdProducto = d.IdProducto,
+                    NombreProducto = d.IdProductoNavigation?.NombreProducto ?? string.Empty,
+                    CodigoSku = d.IdProductoNavigation?.CodigoSku ?? string.Empty,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitarioHistorico = d.PrecioUnitarioHistorico,
+                    SubtotalLinea = d.SubtotalLinea
+                }).ToList()
+            };
+        }
+
+        if (_supabase == null) return null;
+
         var res = await _supabase.From<Venta>()
             .Where(v => v.IdVenta == idVenta)
             .Get();
 
-        var venta = res.Models.FirstOrDefault();
-        if (venta == null) return null;
+        var ventaSupa = res.Models.FirstOrDefault();
+        if (ventaSupa == null) return null;
 
-        await CargarRelacionesVentaAsync(venta);
-        var response = _mapper.Map<VentaResponse>(venta);
-        response.FechaHora = TimeZoneHelper.ToBusinessTime(venta.FechaHora);
+        await CargarRelacionesVentaAsync(ventaSupa);
+        var response = _mapper.Map<VentaResponse>(ventaSupa);
+        response.FechaHora = TimeZoneHelper.ToBusinessTime(ventaSupa.FechaHora);
         response.Detalles = await ObtenerDetallesVentaAsync(idVenta);
 
         return response;
@@ -265,6 +446,8 @@ public class VentaService : IVentaService
 
     public async Task<IEnumerable<VentaResponse>> ObtenerPorTurnoAsync(long idTurno)
     {
+        if (_supabase == null) return Enumerable.Empty<VentaResponse>();
+
         var res = await _supabase.From<Venta>()
             .Where(v => v.IdTurno == idTurno)
             .Get();
@@ -291,6 +474,8 @@ public class VentaService : IVentaService
 
     public async Task<IEnumerable<VentaResponse>> ObtenerHistorialAsync(string? filtroFecha = null)
     {
+        if (_supabase == null) return Enumerable.Empty<VentaResponse>();
+
         var res = await _supabase.From<Venta>().Get();
         var ventas = res.Models.AsEnumerable();
 
@@ -309,7 +494,6 @@ public class VentaService : IVentaService
             }
             else if (filtroFecha.Contains("Semana", StringComparison.OrdinalIgnoreCase))
             {
-                // Inicio de semana local (Lunes 00:00:00)
                 var diasDesdeLunes = ((int)hoyLocal.DayOfWeek + 6) % 7;
                 var inicioSemanaLocal = hoyLocal.AddDays(-diasDesdeLunes);
                 ventas = ventas.Where(v =>
@@ -341,17 +525,40 @@ public class VentaService : IVentaService
 
     public async Task<bool> AnularVentaAsync(long idVenta)
     {
+        if (_context != null)
+        {
+            var venta = await _context.Ventas
+                .Include(v => v.DetallesVenta)
+                    .ThenInclude(d => d.IdProductoNavigation)
+                .FirstOrDefaultAsync(v => v.IdVenta == idVenta);
+
+            if (venta == null || venta.EstadoVenta == "Anulada") return false;
+
+            venta.EstadoVenta = "Anulada";
+            foreach (var d in venta.DetallesVenta)
+            {
+                if (d.IdProductoNavigation != null)
+                {
+                    d.IdProductoNavigation.StockActual += d.Cantidad;
+                }
+            }
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        if (_supabase == null) return false;
+
         var res = await _supabase.From<Venta>()
             .Where(v => v.IdVenta == idVenta)
             .Get();
 
-        var venta = res.Models.FirstOrDefault();
-        if (venta == null || venta.EstadoVenta == "Anulada") return false;
+        var ventaSupa = res.Models.FirstOrDefault();
+        if (ventaSupa == null || ventaSupa.EstadoVenta == "Anulada") return false;
 
-        venta.EstadoVenta = "Anulada";
+        ventaSupa.EstadoVenta = "Anulada";
         await _supabase.From<Venta>()
             .Where(v => v.IdVenta == idVenta)
-            .Update(venta);
+            .Update(ventaSupa);
 
         // Restablecer inventarios
         var detalles = await _supabase.From<DetalleVenta>()
@@ -379,6 +586,8 @@ public class VentaService : IVentaService
 
     private async Task CargarRelacionesVentaAsync(Venta venta)
     {
+        if (_supabase == null) return;
+
         if (venta.IdUsuario != Guid.Empty)
         {
             var uRes = await _supabase.From<Usuario>().Where(u => u.IdUsuario == venta.IdUsuario).Get();
@@ -394,6 +603,8 @@ public class VentaService : IVentaService
 
     private async Task<List<DetalleVentaResponse>> ObtenerDetallesVentaAsync(long idVenta)
     {
+        if (_supabase == null) return new List<DetalleVentaResponse>();
+
         var res = await _supabase.From<DetalleVenta>()
             .Where(d => d.IdVenta == idVenta)
             .Get();
@@ -413,18 +624,21 @@ public class VentaService : IVentaService
 
     private async Task<Dictionary<Guid, Usuario>> ObtenerDiccionarioUsuariosAsync()
     {
+        if (_supabase == null) return new Dictionary<Guid, Usuario>();
         var res = await _supabase.From<Usuario>().Get();
         return res.Models.ToDictionary(u => u.IdUsuario, u => u);
     }
 
     private async Task<Dictionary<long, MetodoPago>> ObtenerDiccionarioMetodosPagoAsync()
     {
+        if (_supabase == null) return new Dictionary<long, MetodoPago>();
         var res = await _supabase.From<MetodoPago>().Get();
         return res.Models.ToDictionary(m => m.IdMetodoPago, m => m);
     }
 
     private async Task<Dictionary<long, Producto>> ObtenerDiccionarioProductosAsync()
     {
+        if (_supabase == null) return new Dictionary<long, Producto>();
         var res = await _supabase.From<Producto>().Get();
         return res.Models.ToDictionary(p => p.IdProducto, p => p);
     }
