@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+    <!-- Requerido por WebApplicationFactory para servir el pipeline ASP.NET Core completo -->
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="6.12.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.8" />
+
+    <!--
+      Alineamos la versión de InMemory con la versión de EF Core que usa la API principal
+      (Npgsql.EntityFrameworkCore.PostgreSQL 8.0.11 → Microsoft.EntityFrameworkCore 8.0.11)
+      Esto evita CS1705 por conflicto de versiones de ensamblado.
+    -->
+    <!--
+      IMPORTANTE: Usar 8.0.14 exactamente para coincidir con la versión de EFCore
+      con la que fue compilado TiendaGo.dll (arrastrada por EFCore.Design 8.0.14
+      y EFCore.Tools 8.0.14 del proyecto API principal). Cualquier versión menor
+      provoca CS1705 (conflicto de versiones de ensamblado).
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.14" />
+
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TiendaGo.csproj" />
+  </ItemGroup>
+
+</Project>

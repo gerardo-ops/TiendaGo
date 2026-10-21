@@ -30,6 +30,11 @@
     <Content Remove="TiendaGo.UnitTests\**" />
     <EmbeddedResource Remove="TiendaGo.UnitTests\**" />
     <None Remove="TiendaGo.UnitTests\**" />
+    <Compile Remove="TiendaGo.IntegrationTests\**" />
+    <Content Remove="TiendaGo.IntegrationTests\**" />
+    <EmbeddedResource Remove="TiendaGo.IntegrationTests\**" />
+    <None Remove="TiendaGo.IntegrationTests\**" />
+
   </ItemGroup>
 
 </Project>
