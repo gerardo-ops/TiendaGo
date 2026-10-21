@@ -230,3 +230,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Declaración necesaria para que WebApplicationFactory<Program> funcione
+// desde el proyecto TiendaGo.IntegrationTests
+public partial class Program { }
