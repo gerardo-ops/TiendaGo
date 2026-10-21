@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="134a114c-9913-44a1-855e-5ab27b2d2c02" name="Admin@DESKTOP-5J1G1IA 2026-10-19 20:58:10" runUser="DESKTOP-5J1G1IA\Admin" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-19T20:58:10.7921267-06:00" queuing="2026-10-19T20:58:10.7921276-06:00" start="2026-10-19T20:58:07.8404260-06:00" finish="2026-10-19T20:58:16.3051695-06:00" />
+  <TestSettings name="default" id="b1b68f4e-b5ff-4c19-ab61-1d39a16b45e6">
+    <Deployment runDeploymentRoot="Admin_DESKTOP-5J1G1IA_2026-10-19_20_58_10" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="220b56da-de07-44da-8e7f-05c112e88298" testId="7b1c9f55-d4b8-d8f6-d4bc-a24222b878bf" testName="UT-POS-02: Validar que al procesar una venta se descuente la cantidad correcta de unidades del inventario (usando EF Core InMemory)" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0194071" startTime="2026-10-19T20:58:14.7736332-06:00" endTime="2026-10-19T20:58:14.7736352-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="220b56da-de07-44da-8e7f-05c112e88298" />
+    <UnitTestResult executionId="e4e3549e-d9f6-45d1-8e13-cd5f09f67e4f" testId="970da68a-7039-45ae-1d32-f550eebde6ee" testName="UT-AUTH-02: Validar que Login con contraseña incorrecta retorne null o lance UnauthorizedAccessException" computerName="DESKTOP-5J1G1IA" duration="00:00:00.4434868" startTime="2026-10-19T20:58:15.9400177-06:00" endTime="2026-10-19T20:58:15.9400183-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4e3549e-d9f6-45d1-8e13-cd5f09f67e4f" />
+    <UnitTestResult executionId="aabf6766-573f-4646-9265-5d61a95ff45a" testId="f9f18a13-4322-c650-b5cf-8fb48829d7c9" testName="UT-AUTH-01: Validar que Login con credenciales válidas retorne el DTO con el token JWT y el rol correspondiente ('Administrador' o 'Cajero')(correo: &quot;cajero@tiendago.com&quot;, passwordPlano: &quot;Cajero123*&quot;, rolEsperado: &quot;Cajero&quot;, nombreCompleto: &quot;Elmer Tesorero (Cajero)&quot;)" computerName="DESKTOP-5J1G1IA" duration="00:00:00.5693247" startTime="2026-10-19T20:58:15.4958886-06:00" endTime="2026-10-19T20:58:15.4958901-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="aabf6766-573f-4646-9265-5d61a95ff45a" />
+    <UnitTestResult executionId="6d76cb3d-4cc0-42fd-ad77-75bd0f0de4f6" testId="493090e2-3210-eb13-6731-59987db43c8b" testName="UT-AUTH-01: Validar que Login con credenciales válidas retorne el DTO con el token JWT y el rol correspondiente ('Administrador' o 'Cajero')(correo: &quot;admin@tiendago.com&quot;, passwordPlano: &quot;Admin123*&quot;, rolEsperado: &quot;Administrador&quot;, nombreCompleto: &quot;Gerardo Batres (Admin)&quot;)" computerName="DESKTOP-5J1G1IA" duration="00:00:05.1463193" startTime="2026-10-19T20:58:14.9259736-06:00" endTime="2026-10-19T20:58:14.9259738-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6d76cb3d-4cc0-42fd-ad77-75bd0f0de4f6" />
+    <UnitTestResult executionId="d054a6d4-af0e-4233-a4af-a89350c355d6" testId="a31b0ddf-9025-5413-706b-cd7643e47af1" testName="UT-POS-01: Validar cálculo exacto de subtotales, IVA y vuelto/cambio ante pago en efectivo" computerName="DESKTOP-5J1G1IA" duration="00:00:00.3745659" startTime="2026-10-19T20:58:14.7537451-06:00" endTime="2026-10-19T20:58:14.7537460-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d054a6d4-af0e-4233-a4af-a89350c355d6" />
+    <UnitTestResult executionId="3e132cb3-61cc-4ff9-822e-af9d43863169" testId="1cc92778-3c4f-85f6-6326-0d10c5c9103a" testName="UT-POS-03: Validar que si la cantidad solicitada supera el stock actual disponible, el método lance una excepción de negocio (InvalidOperationException) con mensaje 'Stock insuficiente' y no altere la base de datos" computerName="DESKTOP-5J1G1IA" duration="00:00:04.5933046" startTime="2026-10-19T20:58:14.3788384-06:00" endTime="2026-10-19T20:58:14.3788402-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e132cb3-61cc-4ff9-822e-af9d43863169" />
+    <UnitTestResult executionId="2a9324a9-2394-4641-aba7-3db6ee278014" testId="981fcaa1-1d22-0f7a-8be6-e2abf2b7240e" testName="UT-PRD-01: Validar que ProductoRequest se mapee correctamente a la entidad Producto (incluyendo Nombre, Precio, Stock y CategoriaId)" computerName="DESKTOP-5J1G1IA" duration="00:00:00.5549136" startTime="2026-10-19T20:58:10.3412381-06:00" endTime="2026-10-19T20:58:10.3412731-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a9324a9-2394-4641-aba7-3db6ee278014" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="UT-PRD-01: Validar que ProductoRequest se mapee correctamente a la entidad Producto (incluyendo Nombre, Precio, Stock y CategoriaId)" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="981fcaa1-1d22-0f7a-8be6-e2abf2b7240e">
+      <Execution id="2a9324a9-2394-4641-aba7-3db6ee278014" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.ProductoMappingTests" name="UT_PRD_01_ProductoRequest_DeberiaMapearseCorrectamenteAEntidadProducto" />
+    </UnitTest>
+    <UnitTest name="UT-POS-02: Validar que al procesar una venta se descuente la cantidad correcta de unidades del inventario (usando EF Core InMemory)" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="7b1c9f55-d4b8-d8f6-d4bc-a24222b878bf">
+      <Execution id="220b56da-de07-44da-8e7f-05c112e88298" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.VentaServiceTests" name="UT_POS_02_RegistrarVenta_DeberiaDescontarStockCorrectoDeInventario_EnBaseDeDatos" />
+    </UnitTest>
+    <UnitTest name="UT-AUTH-02: Validar que Login con contraseña incorrecta retorne null o lance UnauthorizedAccessException" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="970da68a-7039-45ae-1d32-f550eebde6ee">
+      <Execution id="e4e3549e-d9f6-45d1-8e13-cd5f09f67e4f" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.AuthServiceTests" name="UT_AUTH_02_Login_ConPasswordIncorrecto_DeberiaRetornarNull" />
+    </UnitTest>
+    <UnitTest name="UT-POS-01: Validar cálculo exacto de subtotales, IVA y vuelto/cambio ante pago en efectivo" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="a31b0ddf-9025-5413-706b-cd7643e47af1">
+      <Execution id="d054a6d4-af0e-4233-a4af-a89350c355d6" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.VentaServiceTests" name="UT_POS_01_RegistrarVenta_DeberiaCalcularSubtotalIvaYCambioExactos_AntePagoEnEfectivo" />
+    </UnitTest>
+    <UnitTest name="UT-POS-03: Validar que si la cantidad solicitada supera el stock actual disponible, el método lance una excepción de negocio (InvalidOperationException) con mensaje 'Stock insuficiente' y no altere la base de datos" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="1cc92778-3c4f-85f6-6326-0d10c5c9103a">
+      <Execution id="3e132cb3-61cc-4ff9-822e-af9d43863169" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.VentaServiceTests" name="UT_POS_03_RegistrarVenta_DeberiaLanzarExcepcion_YNoModificarBaseDeDatos_CuandoStockEsInsuficiente" />
+    </UnitTest>
+    <UnitTest name="UT-AUTH-01: Validar que Login con credenciales válidas retorne el DTO con el token JWT y el rol correspondiente ('Administrador' o 'Cajero')(correo: &quot;cajero@tiendago.com&quot;, passwordPlano: &quot;Cajero123*&quot;, rolEsperado: &quot;Cajero&quot;, nombreCompleto: &quot;Elmer Tesorero (Cajero)&quot;)" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="f9f18a13-4322-c650-b5cf-8fb48829d7c9">
+      <Execution id="aabf6766-573f-4646-9265-5d61a95ff45a" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.AuthServiceTests" name="UT_AUTH_01_Login_ConCredencialesValidas_DeberiaRetornarTokenJWTYRolCorrespondiente" />
+    </UnitTest>
+    <UnitTest name="UT-AUTH-01: Validar que Login con credenciales válidas retorne el DTO con el token JWT y el rol correspondiente ('Administrador' o 'Cajero')(correo: &quot;admin@tiendago.com&quot;, passwordPlano: &quot;Admin123*&quot;, rolEsperado: &quot;Administrador&quot;, nombreCompleto: &quot;Gerardo Batres (Admin)&quot;)" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.unittests\bin\debug\net8.0\tiendago.unittests.dll" id="493090e2-3210-eb13-6731-59987db43c8b">
+      <Execution id="6d76cb3d-4cc0-42fd-ad77-75bd0f0de4f6" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.UnitTests\bin\Debug\net8.0\TiendaGo.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.UnitTests.AuthServiceTests" name="UT_AUTH_01_Login_ConCredencialesValidas_DeberiaRetornarTokenJWTYRolCorrespondiente" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="7b1c9f55-d4b8-d8f6-d4bc-a24222b878bf" executionId="220b56da-de07-44da-8e7f-05c112e88298" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="970da68a-7039-45ae-1d32-f550eebde6ee" executionId="e4e3549e-d9f6-45d1-8e13-cd5f09f67e4f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f9f18a13-4322-c650-b5cf-8fb48829d7c9" executionId="aabf6766-573f-4646-9265-5d61a95ff45a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="493090e2-3210-eb13-6731-59987db43c8b" executionId="6d76cb3d-4cc0-42fd-ad77-75bd0f0de4f6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a31b0ddf-9025-5413-706b-cd7643e47af1" executionId="d054a6d4-af0e-4233-a4af-a89350c355d6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1cc92778-3c4f-85f6-6326-0d10c5c9103a" executionId="3e132cb3-61cc-4ff9-822e-af9d43863169" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="981fcaa1-1d22-0f7a-8be6-e2abf2b7240e" executionId="2a9324a9-2394-4641-aba7-3db6ee278014" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Resultados sin formato de lista" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Todos los resultados cargados" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="7" executed="7" passed="7" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.24]   Discovering: TiendaGo.UnitTests&#xD;
+[xUnit.net 00:00:00.37]   Discovered:  TiendaGo.UnitTests&#xD;
+[xUnit.net 00:00:00.38]   Starting:    TiendaGo.UnitTests&#xD;
+[xUnit.net 00:00:06.66]   Finished:    TiendaGo.UnitTests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

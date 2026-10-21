@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TiendaGo.csproj" />
+  <Project Path="TiendaGo.UnitTests/TiendaGo.UnitTests.csproj" />
+</Solution>
