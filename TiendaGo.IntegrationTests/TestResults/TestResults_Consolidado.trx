@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="751eb7be-3825-4876-897a-206139b6d5fd" name="Admin@DESKTOP-5J1G1IA 2026-10-27 19:53:16" runUser="DESKTOP-5J1G1IA\Admin" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-27T19:53:16.7042026-06:00" queuing="2026-10-27T19:53:16.7042029-06:00" start="2026-10-27T19:53:09.2892839-06:00" finish="2026-10-27T19:53:17.8422240-06:00" />
+  <TestSettings name="default" id="67bb0c01-c215-41df-8815-d34d9f8608f6">
+    <Deployment runDeploymentRoot="Admin_DESKTOP-5J1G1IA_2026-10-27_19_53_16" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="1a457af9-9c6e-49c0-b850-d2abcf0412ce" testId="443f2cc4-00f2-c3b1-7459-eb187991c4ce" testName="IT-RBAC-04: GET /api/usuarios sin token devuelve 401 Unauthorized" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0013768" startTime="2026-10-27T19:53:16.9333974-06:00" endTime="2026-10-27T19:53:16.9333976-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1a457af9-9c6e-49c0-b850-d2abcf0412ce" />
+    <UnitTestResult executionId="b29873ca-0a99-43aa-b44e-29bc7b5b693f" testId="9405b4ac-afa9-38dc-6273-aeab06092753" testName="IT-POS-04: POST /api/ventas con IdTurno inválido → 400/409" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0306873" startTime="2026-10-27T19:53:16.9113514-06:00" endTime="2026-10-27T19:53:16.9113553-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b29873ca-0a99-43aa-b44e-29bc7b5b693f" />
+    <UnitTestResult executionId="dd11110c-c0fb-4546-9fa7-583d1fc054f2" testId="12fd25af-cf5c-1020-5e83-201239c480b2" testName="IT-POS-03: POST /api/ventas sin detalles de productos → 400 Bad Request" computerName="DESKTOP-5J1G1IA" duration="00:00:04.3875548" startTime="2026-10-27T19:53:16.8804922-06:00" endTime="2026-10-27T19:53:16.8804924-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dd11110c-c0fb-4546-9fa7-583d1fc054f2" />
+    <UnitTestResult executionId="82630a0c-7076-4819-bace-8723b3fd8264" testId="8a588ab6-b152-7cc4-defd-2814babebe7a" testName="IT-RBAC-01b: POST /api/productos sin Authorization devuelve 401 Unauthorized" computerName="DESKTOP-5J1G1IA" duration="00:00:04.1630074" startTime="2026-10-27T19:53:16.6674602-06:00" endTime="2026-10-27T19:53:16.6674861-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="82630a0c-7076-4819-bace-8723b3fd8264" />
+    <UnitTestResult executionId="52c42968-440f-4af0-abfb-4210ed8a52a6" testId="54333c7b-2c0a-ea4f-7201-70323854f61b" testName="IT-AUTH-04: POST /api/auth/login con cuerpo vacío devuelve 400 Bad Request" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0017996" startTime="2026-10-27T19:53:17.7178716-06:00" endTime="2026-10-27T19:53:17.7178717-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="52c42968-440f-4af0-abfb-4210ed8a52a6" />
+    <UnitTestResult executionId="dfb83398-2afd-4bcb-9dba-3a9f4b7826c2" testId="b2a891fe-0190-403d-7c7a-1a32995bb991" testName="IT-RBAC-02: POST /api/productos con token rol 'Cajero' devuelve 403 Forbidden" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0053390" startTime="2026-10-27T19:53:16.9389471-06:00" endTime="2026-10-27T19:53:16.9389472-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dfb83398-2afd-4bcb-9dba-3a9f4b7826c2" />
+    <UnitTestResult executionId="a5662238-6d99-47fe-9e67-67171a044631" testId="952483ef-6466-6689-aab9-bdeab0435d69" testName="IT-RBAC-03: POST /api/productos con token 'Administrador' devuelve 201 Created con Location" computerName="DESKTOP-5J1G1IA" duration="00:00:00.2566729" startTime="2026-10-27T19:53:16.9319155-06:00" endTime="2026-10-27T19:53:16.9319158-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a5662238-6d99-47fe-9e67-67171a044631" />
+    <UnitTestResult executionId="40396563-90ce-473f-a92a-f6b1e941ccc9" testId="e8aa9eab-08fc-0386-8f63-c1fc2d33ab7c" testName="IT-AUTH-03: POST /api/auth/login con correo inexistente devuelve 401 Unauthorized" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0056004" startTime="2026-10-27T19:53:17.3195098-06:00" endTime="2026-10-27T19:53:17.3195100-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="40396563-90ce-473f-a92a-f6b1e941ccc9" />
+    <UnitTestResult executionId="4bbc27e7-f78a-4500-8603-44f7a941f846" testId="55f97df7-24a9-c303-a9c9-362d73e157ef" testName="IT-AUTH-01: POST /api/auth/login con credenciales válidas devuelve 200 OK y JWT con claim de rol" computerName="DESKTOP-5J1G1IA" duration="00:00:04.8169913" startTime="2026-10-27T19:53:17.3136290-06:00" endTime="2026-10-27T19:53:17.3136293-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4bbc27e7-f78a-4500-8603-44f7a941f846" />
+    <UnitTestResult executionId="68dc223d-f1a9-41c9-be81-fb552ab3c38c" testId="cf15899a-58f7-4c23-2d01-95e77c05b852" testName="IT-RBAC-01: GET /api/productos sin Authorization devuelve 401 Unauthorized" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0064637" startTime="2026-10-27T19:53:16.6828516-06:00" endTime="2026-10-27T19:53:16.6828521-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="68dc223d-f1a9-41c9-be81-fb552ab3c38c" />
+    <UnitTestResult executionId="0df80e7b-d506-499c-b218-b115bdd7f657" testId="012a02b3-38ac-044f-7fda-e79fdc8b1ad9" testName="IT-POS-01: POST /api/ventas con stock suficiente → 201 Created y stock decrementado atómicamente" computerName="DESKTOP-5J1G1IA" duration="00:00:00.1146854" startTime="2026-10-27T19:53:17.0262919-06:00" endTime="2026-10-27T19:53:17.0262920-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0df80e7b-d506-499c-b218-b115bdd7f657" />
+    <UnitTestResult executionId="0897453e-191c-482e-829e-93fd38b641ae" testId="c14229ca-94b2-a03f-5ee2-ea2217113f1c" testName="IT-AUTH-02: POST /api/auth/login con contraseña incorrecta devuelve 401 Unauthorized" computerName="DESKTOP-5J1G1IA" duration="00:00:00.3961991" startTime="2026-10-27T19:53:17.7159150-06:00" endTime="2026-10-27T19:53:17.7159152-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0897453e-191c-482e-829e-93fd38b641ae" />
+    <UnitTestResult executionId="0fbe30e8-749a-434e-bf65-1d66a5683a33" testId="2203384d-fe9d-d1c2-9831-0688de72a060" testName="IT-POS-02: POST /api/ventas con más unidades que stock disponible → 400/409 y stock intacto" computerName="DESKTOP-5J1G1IA" duration="00:00:00.0082712" startTime="2026-10-27T19:53:17.0347017-06:00" endTime="2026-10-27T19:53:17.0347018-06:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0fbe30e8-749a-434e-bf65-1d66a5683a33" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="IT-RBAC-04: GET /api/usuarios sin token devuelve 401 Unauthorized" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="443f2cc4-00f2-c3b1-7459-eb187991c4ce">
+      <Execution id="1a457af9-9c6e-49c0-b850-d2abcf0412ce" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.SeguridadRBACTests" name="ObtenerUsuarios_SinToken_Devuelve401Unauthorized" />
+    </UnitTest>
+    <UnitTest name="IT-AUTH-01: POST /api/auth/login con credenciales válidas devuelve 200 OK y JWT con claim de rol" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="55f97df7-24a9-c303-a9c9-362d73e157ef">
+      <Execution id="4bbc27e7-f78a-4500-8603-44f7a941f846" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.AuthEndpointsTests" name="Login_ConCredencialesValidas_Devuelve200OkYTokenJwt" />
+    </UnitTest>
+    <UnitTest name="IT-RBAC-01b: POST /api/productos sin Authorization devuelve 401 Unauthorized" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="8a588ab6-b152-7cc4-defd-2814babebe7a">
+      <Execution id="82630a0c-7076-4819-bace-8723b3fd8264" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.SeguridadRBACTests" name="CrearProducto_SinToken_Devuelve401Unauthorized" />
+    </UnitTest>
+    <UnitTest name="IT-AUTH-03: POST /api/auth/login con correo inexistente devuelve 401 Unauthorized" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="e8aa9eab-08fc-0386-8f63-c1fc2d33ab7c">
+      <Execution id="40396563-90ce-473f-a92a-f6b1e941ccc9" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.AuthEndpointsTests" name="Login_ConCorreoNoRegistrado_Devuelve401Unauthorized" />
+    </UnitTest>
+    <UnitTest name="IT-RBAC-01: GET /api/productos sin Authorization devuelve 401 Unauthorized" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="cf15899a-58f7-4c23-2d01-95e77c05b852">
+      <Execution id="68dc223d-f1a9-41c9-be81-fb552ab3c38c" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.SeguridadRBACTests" name="ObtenerProductos_SinToken_Devuelve401Unauthorized" />
+    </UnitTest>
+    <UnitTest name="IT-POS-02: POST /api/ventas con más unidades que stock disponible → 400/409 y stock intacto" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="2203384d-fe9d-d1c2-9831-0688de72a060">
+      <Execution id="0fbe30e8-749a-434e-bf65-1d66a5683a33" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.VentasEndpointsTests" name="RegistrarVenta_ConStockInsuficiente_Devuelve409YNoModificaStock" />
+    </UnitTest>
+    <UnitTest name="IT-POS-03: POST /api/ventas sin detalles de productos → 400 Bad Request" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="12fd25af-cf5c-1020-5e83-201239c480b2">
+      <Execution id="dd11110c-c0fb-4546-9fa7-583d1fc054f2" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.VentasEndpointsTests" name="RegistrarVenta_SinDetalles_Devuelve400BadRequest" />
+    </UnitTest>
+    <UnitTest name="IT-POS-01: POST /api/ventas con stock suficiente → 201 Created y stock decrementado atómicamente" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="012a02b3-38ac-044f-7fda-e79fdc8b1ad9">
+      <Execution id="0df80e7b-d506-499c-b218-b115bdd7f657" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.VentasEndpointsTests" name="RegistrarVenta_ConStockSuficiente_Devuelve201YDecrementaStock" />
+    </UnitTest>
+    <UnitTest name="IT-AUTH-02: POST /api/auth/login con contraseña incorrecta devuelve 401 Unauthorized" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="c14229ca-94b2-a03f-5ee2-ea2217113f1c">
+      <Execution id="0897453e-191c-482e-829e-93fd38b641ae" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.AuthEndpointsTests" name="Login_ConPasswordIncorrecta_Devuelve401Unauthorized" />
+    </UnitTest>
+    <UnitTest name="IT-POS-04: POST /api/ventas con IdTurno inválido → 400/409" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="9405b4ac-afa9-38dc-6273-aeab06092753">
+      <Execution id="b29873ca-0a99-43aa-b44e-29bc7b5b693f" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.VentasEndpointsTests" name="RegistrarVenta_ConTurnoInvalido_DevuelveError" />
+    </UnitTest>
+    <UnitTest name="IT-RBAC-02: POST /api/productos con token rol 'Cajero' devuelve 403 Forbidden" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="b2a891fe-0190-403d-7c7a-1a32995bb991">
+      <Execution id="dfb83398-2afd-4bcb-9dba-3a9f4b7826c2" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.SeguridadRBACTests" name="CrearProducto_ConTokenCajero_Devuelve403Forbidden" />
+    </UnitTest>
+    <UnitTest name="IT-RBAC-03: POST /api/productos con token 'Administrador' devuelve 201 Created con Location" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="952483ef-6466-6689-aab9-bdeab0435d69">
+      <Execution id="a5662238-6d99-47fe-9e67-67171a044631" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.SeguridadRBACTests" name="CrearProducto_ConTokenAdministrador_Devuelve201CreatedConLocation" />
+    </UnitTest>
+    <UnitTest name="IT-AUTH-04: POST /api/auth/login con cuerpo vacío devuelve 400 Bad Request" storage="c:\users\admin\documents\proyectos\tiendago\tiendago.integrationtests\bin\debug\net8.0\tiendago.integrationtests.dll" id="54333c7b-2c0a-ea4f-7201-70323854f61b">
+      <Execution id="52c42968-440f-4af0-abfb-4210ed8a52a6" />
+      <TestMethod codeBase="C:\Users\Admin\Documents\Proyectos\TiendaGo\TiendaGo.IntegrationTests\bin\Debug\net8.0\TiendaGo.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TiendaGo.IntegrationTests.Tests.AuthEndpointsTests" name="Login_ConCuerpoVacio_Devuelve400BadRequest" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="443f2cc4-00f2-c3b1-7459-eb187991c4ce" executionId="1a457af9-9c6e-49c0-b850-d2abcf0412ce" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9405b4ac-afa9-38dc-6273-aeab06092753" executionId="b29873ca-0a99-43aa-b44e-29bc7b5b693f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="12fd25af-cf5c-1020-5e83-201239c480b2" executionId="dd11110c-c0fb-4546-9fa7-583d1fc054f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a588ab6-b152-7cc4-defd-2814babebe7a" executionId="82630a0c-7076-4819-bace-8723b3fd8264" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="54333c7b-2c0a-ea4f-7201-70323854f61b" executionId="52c42968-440f-4af0-abfb-4210ed8a52a6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b2a891fe-0190-403d-7c7a-1a32995bb991" executionId="dfb83398-2afd-4bcb-9dba-3a9f4b7826c2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="952483ef-6466-6689-aab9-bdeab0435d69" executionId="a5662238-6d99-47fe-9e67-67171a044631" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e8aa9eab-08fc-0386-8f63-c1fc2d33ab7c" executionId="40396563-90ce-473f-a92a-f6b1e941ccc9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="55f97df7-24a9-c303-a9c9-362d73e157ef" executionId="4bbc27e7-f78a-4500-8603-44f7a941f846" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cf15899a-58f7-4c23-2d01-95e77c05b852" executionId="68dc223d-f1a9-41c9-be81-fb552ab3c38c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="012a02b3-38ac-044f-7fda-e79fdc8b1ad9" executionId="0df80e7b-d506-499c-b218-b115bdd7f657" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c14229ca-94b2-a03f-5ee2-ea2217113f1c" executionId="0897453e-191c-482e-829e-93fd38b641ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2203384d-fe9d-d1c2-9831-0688de72a060" executionId="0fbe30e8-749a-434e-bf65-1d66a5683a33" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Resultados sin formato de lista" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Todos los resultados cargados" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="13" executed="13" passed="13" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.4.5+1caef2f33e (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:02.04]   Discovering: TiendaGo.IntegrationTests&#xD;
+[xUnit.net 00:00:02.11]   Discovered:  TiendaGo.IntegrationTests&#xD;
+[xUnit.net 00:00:02.11]   Starting:    TiendaGo.IntegrationTests&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 0 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 0 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 0 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 3 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 3 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 3 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 2 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 2 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 2 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 2 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 2 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 2 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+[SEED] Usuario administrador (admin@tiendago.com) creado exitosamente en Supabase.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+[SEED] Usuario administrador (admin@tiendago.com) creado exitosamente en Supabase.&#xD;
+[SEED] Usuario administrador (admin@tiendago.com) creado exitosamente en Supabase.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+warn: LuckyPennySoftware.AutoMapper.License[0]&#xD;
+      You do not have a valid license key for the Lucky Penny software AutoMapper. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.&#xD;
+warn: LuckyPennySoftware.AutoMapper.License[0]&#xD;
+      You do not have a valid license key for the Lucky Penny software AutoMapper. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.&#xD;
+warn: LuckyPennySoftware.AutoMapper.License[0]&#xD;
+      You do not have a valid license key for the Lucky Penny software AutoMapper. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 3 entities to in-memory store.&#xD;
+[xUnit.net 00:00:07.42]   Finished:    TiendaGo.IntegrationTests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
